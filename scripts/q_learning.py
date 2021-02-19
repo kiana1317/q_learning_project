@@ -14,6 +14,9 @@ from tf.transformations import quaternion_from_euler, euler_from_quaternion
 from q_learning_project.msg import RobotMoveDBToBlock, QMatrix, QLearningReward 
 
 import time
+# import the moveit_commander, which allows us to control the arms
+import moveit_commander
+import math
 
 class QLearning(object):
 
@@ -47,6 +50,34 @@ class QLearning(object):
         rospy.Subscriber("/q_learning/reward", QLearningReward, self.processReward )
         # Creats a twist object
         self.twist = Twist()
+
+        # the interface to the group of joints making up the turtlebot3
+        # openmanipulator arm
+        self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
+
+        # the interface to the group of joints making up the turtlebot3
+        # openmanipulator gripper
+        self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
+
+    def move_arm(self):
+        # arm_joint_goal is a list of 4 radian values, 1 for each joint
+        # for instance,
+        #           arm_joint_goal = [0.0,0.0,0.0,0.0]
+        arm_joint_goal = [0.0,
+            math.radians(5.0),
+            math.radians(10.0),
+            math.radians(-20.0)]
+        # wait=True ensures that the movement is synchronous
+        self.move_group_arm.go(arm_joint_goal, wait=True)
+        # Calling ``stop()`` ensures that there is no residual movement
+        self.move_group_arm.stop()
+
+        # gripper_joint_goal is a list of 2 radian values, 1 for the left gripper and 1 for the right gripper
+        # for instance,
+        gripper_joint_goal = [0.009,0.0009]
+        #           gripper_joint_goal = [0.0, 0.0]
+        self.move_group_gripper.go(gripper_joint_goal, wait=True)
+        self.move_group_gripper.stop()
     
     def processScan(self, data):
         pass
