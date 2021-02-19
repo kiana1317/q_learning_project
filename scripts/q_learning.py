@@ -2,7 +2,7 @@
 
 import rospy, cv2, cv_bridge
 import numpy as np
-import keras_ocr
+# import keras_ocr
 
 
 from gazebo_msgs.msg import ModelState, ModelStates
@@ -95,21 +95,23 @@ class QLearning(object):
         # arm_joint_goal is a list of 4 radian values, 1 for each joint
         # for instance,
         #           arm_joint_goal = [0.0,0.0,0.0,0.0]
-        # arm_joint_goal = [0.0,
-        #     math.radians(5.0),
-        #     math.radians(10.0),
-        #     math.radians(-20.0)]
-        # # wait=True ensures that the movement is synchronous
-        # self.move_group_arm.go(arm_joint_goal, wait=True)
-        # # Calling ``stop()`` ensures that there is no residual movement
-        # self.move_group_arm.stop()
+        arm_joint_goal = [0.0,
+            math.radians(5.0),
+            math.radians(10.0),
+            math.radians(-20.0)]
+        # wait=True ensures that the movement is synchronous
+        self.move_group_arm.go(arm_joint_goal, wait=True)
+        # Calling ``stop()`` ensures that there is no residual movement
+        self.move_group_arm.stop()
 
-        # # gripper_joint_goal is a list of 2 radian values, 1 for the left gripper and 1 for the right gripper
-        # # for instance,
-        # gripper_joint_goal = [0.009,0.0009]
-        # #           gripper_joint_goal = [0.0, 0.0]
-        # self.move_group_gripper.go(gripper_joint_goal, wait=True)
-        # self.move_group_gripper.stop()
+        # gripper_joint_goal is a list of 2 radian values, 1 for the left gripper and 1 for the right gripper
+        # for instance,
+        gripper_joint_goal = [0.009,0.0009]
+        #           gripper_joint_goal = [0.0, 0.0]
+        self.move_group_gripper.go(gripper_joint_goal, wait=True)
+        self.move_group_gripper.stop()
+    
+    def processScan(self, data):
         pass
 
     def image_callback(self, data):
