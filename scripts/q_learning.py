@@ -223,7 +223,6 @@ class QLearning(object):
         pass
 
     def run(self):
-        self.process_blocks()
         rospy.spin()
 
 
