@@ -17,6 +17,7 @@ import time
 # import the moveit_commander, which allows us to control the arms
 import moveit_commander
 import math
+import random
 
 class QLearning(object):
 
@@ -67,8 +68,7 @@ class QLearning(object):
         self.move_arm()
 
     def initialize_action_matrix(self):
-    
-        # Create action matrix
+        
         action_matrix = []
         for b in range(4):
             for g in range(4):
@@ -76,31 +76,62 @@ class QLearning(object):
                     action_matrix.append((r,g,b))
         
         starting_state, next_state = action_matrix
-        for step1_index in range(len(starting_state)):
-            for step2_index in range((len(next_state))):
-                
-                step1 = starting_state[step1_index]
-                step2 = next_state[step2_index]
-                # Check if next_step is valid
-                # two blocks are not on the same space
-                if step2[0] == step2[1] 
-                    or step2[0] == step2[2] 
-                    or step2[1] == step2[2]:
-                    self.action_matrix[step1_index][]
-
-        # Select step 1 and step 2
-        # 0 	red 	1
-        # 1 	red 	2
-        # 2 	red 	3
-        # 3 	green 	1
-        # 4 	green 	2
-        # 5 	green 	3
-        # 6 	blue 	1
-        # 7 	blue 	2
-        # 8 	blue 	3
+        for step1_index, step1 in starting_state.enumerate():
+            for step2_index, step2 in next_state.enumerate():
+                # Check if steps are valid
+                if not self.is_valid_step(step1, step2):
+                    self.action_matrix[step1_index][step2_index] = -1
+                else:
+                    # find action
+                    self.action_matrix[step1_index][step2_index] = self.get_action(step1,step2)
 
 
+    def is_valid_step(self,step1, step2):
+        steps = [step1, step2]
+        
+        # Check if the starting positions of step1 and step2 are valid
+        # No dumbbells are at the same position
+        num_blocks = {0: 1, 1: 0}
+        for index, (r,g,b) in steps.enumerate():
+            if r != 0:
+                num_block[index] += 1
+                if r == g or r == b :
+                    return False
+            if g != 0:
+                num_block[index] += 1
+                if b == g:
+                    return False 
+            if b != 0:
+                num_block[index] += 1
 
+        # Check if more than one block are moved from step1 to step2
+        # Count moved blocks
+        if num_blocks[1] != num_blocks[0] + 1:
+            return False
+        
+        return True
+
+    def get_action(step1, step2):
+        actions = []
+        # red = 1, green = 2, blue = 3
+        for color in range(1,4):
+            for box in range(1,4):
+                actions.append((color,box))
+
+        for i in range(3):
+          if step1[i] != step2[i]:
+              color = i + 1
+              box = step2[i] - 1
+            #   returns action number
+              return actions.index((color,box))  
+
+
+    def get_random_action(step1):
+        possible_actions = self.action_matrix[step1]
+        action = random.choice(possible_actions)
+        while action == -1:
+            action = random.choice(possible_actions)
+        return action
         
     def move_arm(self):
         # arm_joint_goal is a list of 4 radian values, 1 for each joint
@@ -166,8 +197,8 @@ class QLearning(object):
         # Lower the dumbbel to ground level
         arm_joint_goal = [0,
             math.radians(50.0),
-            math.radians(-40),
-            math.radians(-20)]
+            math.radians(-40.0),
+            math.radians(-20.0)]
         # wait=True ensures that the movement is synchronous
         self.move_group_arm.go(arm_joint_goal, wait=True)
         # Calling ``stop()`` ensures that there is no residual movement
