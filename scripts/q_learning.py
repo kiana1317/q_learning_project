@@ -70,11 +70,11 @@ class QLearning(object):
 
         # the interface to the group of joints making up the turtlebot3
         # openmanipulator arm
-        self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
+        # self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
 
         # the interface to the group of joints making up the turtlebot3
         # openmanipulator gripper
-        self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
+        # self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
         self.reached_dumbbell = False
         self.action_matrix = [[] for x in range(64)]
         self.initialize_action_matrix()
@@ -202,7 +202,7 @@ class QLearning(object):
         self.move_group_gripper.stop()
 
     def lift_dumbbell(self):
-         arm_joint_goal = [0,
+        arm_joint_goal = [0,
             math.radians(50.0),
             math.radians(-30),
             math.radians(-20)]
@@ -238,10 +238,10 @@ class QLearning(object):
         for i in range(64):
             x = QMatrixRow()
             for j in range(9):
-                x.append(0)
-            self.q_matrix.append(x)
+                x.q_matrix_row.append(0)
+            self.q_matrix.q_matrix.append(x)
         self.q_matrix_pub.publish(self.q_matrix)
-        print(self.q_matrix)
+        print(self.q_matrix.q_matrix[0].q_matrix_row[0])
 
 
     def processReward(self, data):
@@ -260,13 +260,15 @@ class QLearning(object):
     def update_q_matrix(self):
         alpha = 1
         gamma = 0.5
+
+        # get value of row from state & action
+        current_val = self.q_matrix.q_matrix[self.current_state].q_matrix_row[self.action]
         
         # get max value of all actions for state2
         max_a = self.q_matrix[self.next_state].max()
 
         # update q matrix for state1 & action_t
-        self.q_matrix[self.current_state][self.action] += alpha * (self.reward \
-            + gamma * max_a  - self.q_matrix[self.current_state][self.action])
+        current_val += alpha * (self.reward + gamma * max_a  - current_val)
 
         # publish Q matrix
         self.q_matrix_pub.publish(self.q_matrix)
