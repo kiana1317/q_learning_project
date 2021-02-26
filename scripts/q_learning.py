@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
-
+import numpy as np
 
 from gazebo_msgs.msg import ModelState, ModelStates
 from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
@@ -11,7 +11,7 @@ from std_msgs.msg import Header
 
 from random import shuffle
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
-from q_learning_project.msg import RobotMoveDBToBlock, QMatrix, QLearningReward 
+from q_learning_project.msg import RobotMoveDBToBlock, QMatrix, QLearningReward, QMatrixRow 
 
 import time
 # import the moveit_commander, which allows us to control the arms
@@ -49,7 +49,22 @@ class QLearning(object):
         self.q_matrix_pub = rospy.Publisher("/q_learning/q_matrix", QMatrix, queue_size=10)
         
         #ROS subscribe to Rewards to receive from the environment the reward after each action you take
-        rospy.Subscriber("/q_learning/reward", QLearningReward, self.processReward )
+        rospy.Subscriber("/q_learning/reward", QLearningReward, self.processReward)
+
+        # intialize Q matrix, reward, minimum number of iterations to do before 
+        # checking convergence, current iteraton, and convergence
+        self.q_matrix = QMatrix()
+        self.initialize_q_matrix()
+        self.reward = None
+        self.min_iterations = 500
+        self.current_iteration = 0
+        self.converged = False
+
+        # intialize current state, next state, and action taken
+        self.current_state = 0
+        self.next_state = -1
+        self.action = -1
+
         # Creats a twist object
         self.twist = Twist()
 
@@ -62,6 +77,7 @@ class QLearning(object):
         self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
         self.reached_dumbbell = False
         self.action_matrix = [[] for x in range(64)]
+        self.initialize_action_matrix()
         self.initialized = True
 
         # Position the arm
@@ -126,12 +142,14 @@ class QLearning(object):
               return actions.index((color,box))  
 
 
-    def get_random_action(step1):
-        possible_actions = self.action_matrix[step1]
+    def get_random_action(self):
+        # gets valid random action given current state
+        possible_actions = self.action_matrix[self.current_state]
         action = random.choice(possible_actions)
         while action == -1:
             action = random.choice(possible_actions)
-        return action
+        self.action = action
+        self.next_state = possible_actions.index(action)
         
     def move_arm(self):
         # arm_joint_goal is a list of 4 radian values, 1 for each joint
@@ -215,10 +233,58 @@ class QLearning(object):
     def model_states_received(self, data):
         pass
 
+    def initialize_q_matrix(self):
+        # loop over 64 rows and 9 cols putting 0 in each
+        for i in range(64):
+            x = QMatrixRow()
+            for j in range(9):
+                x.append(0)
+            self.q_matrix.append(x)
+        self.q_matrix_pub.publish(self.q_matrix)
+        print(self.q_matrix)
+
+
     def processReward(self, data):
-        pass
+        # allows reward to be processed by q matrix
+        self.reward = data
+
+    def check_convergence(self):
+
+        # check if iterated minmum amount of times
+        if self.current_iteration < self.min_iterations:
+            return
+        
+        self.converged = True
+        print("The matrix has converged!")
+
+    def update_q_matrix(self):
+        alpha = 1
+        gamma = 0.5
+        
+        # get max value of all actions for state2
+        max_a = self.q_matrix[self.next_state].max()
+
+        # update q matrix for state1 & action_t
+        self.q_matrix[self.current_state][self.action] += alpha * (self.reward \
+            + gamma * max_a  - self.q_matrix[self.current_state][self.action])
+
+        # publish Q matrix
+        self.q_matrix_pub.publish(self.q_matrix)
+
+        # update current state
+        self.current_state = self.next_state
+
 
     def run(self):
+        """
+        # while Q matrix is not converged
+        while self.converged is False:
+            
+            # check whether we should update convergence
+            self.check_convergence()
+            
+        """
+
         rospy.spin()
 
 
