@@ -39,11 +39,6 @@ class QLearning(object):
         # ROS publish to the Gazebo topic to set the locations of the models
         self.model_states_pub = rospy.Publisher("/gazebo/set_model_state", ModelState, queue_size=10)
 
-        # ROS publish to the /cmd_vel topic to update angular and linear velocity
-        self.cmd_vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
-
-        # ROS subscribe to the Scan topic to monitor items in the robot's va
-        rospy.Subscriber("/scan", LaserScan, self.processScan)
 
         # ROS publish to Q Matrix to update Q-Learning Matrix
         self.q_matrix_pub = rospy.Publisher("/q_learning/q_matrix", QMatrix, queue_size=10)
