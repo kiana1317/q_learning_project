@@ -68,14 +68,6 @@ class QLearning(object):
         # Creats a twist object
         self.twist = Twist()
 
-        # the interface to the group of joints making up the turtlebot3
-        # openmanipulator arm
-        # self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
-
-        # the interface to the group of joints making up the turtlebot3
-        # openmanipulator gripper
-        # self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
-        self.reached_dumbbell = False
         self.action_matrix = [[] for x in range(64)]
         self.initialize_action_matrix()
         self.initialized = True
@@ -150,28 +142,7 @@ class QLearning(object):
             action = random.choice(possible_actions)
         self.action = action
         self.next_state = possible_actions.index(action)
-        
-    def move_arm(self):
-        # arm_joint_goal is a list of 4 radian values, 1 for each joint
-        # for instance,
-        #           arm_joint_goal = [0.0,0.0,0.0,0.0]
-        if not self.initialized:
-            print("Initializing...")
-            return
-        arm_joint_goal = [0,
-            math.radians(50.0),
-            math.radians(-40),
-            math.radians(-20)]
-        # wait=True ensures that the movement is synchronous
-        self.move_group_arm.go(arm_joint_goal, wait=True)
-        # Calling ``stop()`` ensures that there is no residual movement
-        self.move_group_arm.stop()
 
-        # gripper_joint_goal is a list of 2 radian values, 1 for the left gripper and 1 for the right gripper
-        self.open_grip()
-
-    
-    
     def robot_actions(self, data):
         pass
 
