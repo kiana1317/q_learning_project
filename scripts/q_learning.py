@@ -150,8 +150,8 @@ class QLearning(object):
             for j in range(9):
                 x.q_matrix_row.append(0)
             self.q_matrix.q_matrix.append(x)
+        # publish q matrix
         self.q_matrix_pub.publish(self.q_matrix)
-        print(self.q_matrix.q_matrix[0].q_matrix_row[0])
 
 
     def processReward(self, data):
@@ -189,15 +189,21 @@ class QLearning(object):
         self.current_state = self.next_state
 
     def run(self):
-        """
+        
         # while Q matrix is not converged
         while self.converged is False:
+            # update iteration
+            self.current_iteration += 1
+
+            # update next action
+            self.get_random_action(self.current_state)
             
             # check whether we should update convergence
-            self.check_convergence()
-            
-        """
+            self.check_convergence
 
+            # update q matrix
+            self.update_q_matrix()
+        
         rospy.spin()
 
 
