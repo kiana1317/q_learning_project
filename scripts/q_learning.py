@@ -268,7 +268,8 @@ class QLearning(object):
         max_a = self.q_matrix[self.next_state].max()
 
         # update q matrix for state1 & action_t
-        current_val += alpha * (self.reward + gamma * max_a  - current_val)
+        self.q_matrix.q_matrix[self.current_state].q_matrix_row[self.action]  += \
+            alpha * (self.reward + gamma * max_a  - current_val)
 
         # publish Q matrix
         self.q_matrix_pub.publish(self.q_matrix)
