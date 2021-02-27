@@ -77,66 +77,66 @@ class QLearning(object):
 
     def initialize_action_matrix(self):
         
-        action_matrix = []
+        # Populate State Space
+        state_space = []
         for b in range(4):
             for g in range(4):
                 for r in range(4):
-                    action_matrix.append((r,g,b))
+                    state_space.append((r,g,b))
         
-        starting_state, next_state = action_matrix
-        for step1_index, step1 in starting_state.enumerate():
-            for step2_index, step2 in next_state.enumerate():
+        # Iterate through step1 and step2 sequences
+        for s1_index, s1 in enumerate(state_space):
+            for s2_index, s2 in enumerate(state_space):
                 # Check if steps are valid
-                if not self.is_valid_step(step1, step2):
-                    self.action_matrix[step1_index][step2_index] = -1
+                if not self.is_valid_step(s1, s2):
+                    self.action_matrix[s1_index][s2_index] = -1
                 else:
-                    # find action
-                    self.action_matrix[step1_index][step2_index] = self.get_action(step1,step2)
+                    self.action_matrix[s1_index][s2_index] = self.get_action(s1,s2)
 
 
-    def is_valid_step(self,step1, step2):
-        steps = [step1, step2]
-        
-        # Check if the starting positions of step1 and step2 are valid
-        # No dumbbells are at the same position
-        num_blocks = {0: 1, 1: 0}
-        for index, (r,g,b) in steps.enumerate():
+    def is_valid_step(self,s1, s2):
+        # Count moved blocks
+        moved_blocks = {0: 1, 1: 0}
+
+        # Check no dumbbells are at the same position
+        steps = [s1, s2]
+        for index, (r,g,b) in enumerate(steps):
             if r != 0:
-                num_block[index] += 1
+                moved_blocks[index] += 1
                 if r == g or r == b :
                     return False
             if g != 0:
-                num_block[index] += 1
+                moved_blocks[index] += 1
                 if b == g:
                     return False 
             if b != 0:
-                num_block[index] += 1
+                moved_blocks[index] += 1
 
-        # Check if more than one block are moved from step1 to step2
-        # Count moved blocks
-        if num_blocks[1] != num_blocks[0] + 1:
+        # Check anything other than one block is moved from step1 to step2
+        if moved_blocks[1] != moved_blocks[0] + 1:
             return False
         
         return True
 
-    def get_action(step1, step2):
+    def get_action(self, s1, s2):
         actions = []
         # red = 1, green = 2, blue = 3
+        # 1,2,3 box numbers respectively
         for color in range(1,4):
             for box in range(1,4):
                 actions.append((color,box))
 
         for i in range(3):
-          if step1[i] != step2[i]:
+          if s1[i] != s2[i]:
               color = i + 1
-              box = step2[i] - 1
-            #   returns action number
+              box = s2[i] - 1
               return actions.index((color,box))  
 
 
-    def get_random_action(self):
-        # gets valid random action given current state
-        possible_actions = self.action_matrix[self.current_state]
+    def get_random_action(self, step1):
+        if not self.initialized:
+            return
+        possible_actions = self.action_matrix[step1]
         action = random.choice(possible_actions)
         while action == -1:
             action = random.choice(possible_actions)
