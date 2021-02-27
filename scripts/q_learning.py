@@ -172,61 +172,6 @@ class QLearning(object):
 
     
     
-    def processScan(self, data):
-        # pass
-        if not self.initialized:
-            return
-
-        # Move the robot to the dumbbell
-        if data.ranges[0] < 0.27:
-            self.twist.linear.x = 0
-            self.twist.angular.z = 0
-            self.cmd_vel_pub.publish(self.twist)
-            self.reached_dumbbell = True
-        elif not self.reached_dumbbell:
-            self.twist.linear.x = 0.1
-            self.twist.angular.z = 0
-            self.cmd_vel_pub.publish(self.twist)
-
-        
-    def close_grip(self):
-        # close grip
-        gripper_joint_goal = [.005,-.005]
-        self.move_group_gripper.go(gripper_joint_goal, wait=True)
-        self.move_group_gripper.stop()
-
-    def open_grip(self):
-        # open grip
-        gripper_joint_goal = [.01,-.01]
-        self.move_group_gripper.go(gripper_joint_goal, wait=True)
-        self.move_group_gripper.stop()
-
-    def lift_dumbbell(self):
-        arm_joint_goal = [0,
-            math.radians(50.0),
-            math.radians(-30),
-            math.radians(-20)]
-        # wait=True ensures that the movement is synchronous
-        self.move_group_arm.go(arm_joint_goal, wait=True)
-        # Calling ``stop()`` ensures that there is no residual movement
-        self.move_group_arm.stop()
-
-    def place_dumbbell(self):
-        # Lower the dumbbel to ground level
-        arm_joint_goal = [0,
-            math.radians(50.0),
-            math.radians(-40.0),
-            math.radians(-20.0)]
-        # wait=True ensures that the movement is synchronous
-        self.move_group_arm.go(arm_joint_goal, wait=True)
-        # Calling ``stop()`` ensures that there is no residual movement
-        self.move_group_arm.stop()
-        self.open_grip()
-        self.twist.linear.x = -0.1
-        self.twist.angular.z = 0.0
-        self.cmd_vel_pub.publish(self.twist)
-        rospy.sleep(1)
-
     def robot_actions(self, data):
         pass
 
