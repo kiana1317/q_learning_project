@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import rospy
-import numpy as np
 
 from gazebo_msgs.msg import ModelState, ModelStates
 from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
@@ -14,8 +13,6 @@ from tf.transformations import quaternion_from_euler, euler_from_quaternion
 from q_learning_project.msg import RobotMoveDBToBlock, QMatrix, QLearningReward, QMatrixRow 
 
 import time
-# import the moveit_commander, which allows us to control the arms
-import moveit_commander
 import math
 import random
 
@@ -60,15 +57,18 @@ class QLearning(object):
         self.next_state = -1
         self.action = -1
 
-        # Creats a twist object
-        self.twist = Twist()
 
+        # Create action matrix
         self.action_matrix = [[] for x in range(64)]
+        for i in range(64):
+            self.action_matrix[i] = [0 for x in range(64)]
+
+        # Initialize acton matrix
         self.initialize_action_matrix()
+
         self.initialized = True
 
-        # Position the arm
-        self.move_arm()
+        
 
     def initialize_action_matrix(self):
         
@@ -110,7 +110,6 @@ class QLearning(object):
         # Check anything other than one block is moved from step1 to step2
         if moved_blocks[1] != moved_blocks[0] + 1:
             return False
-        
         return True
 
     def get_action(self, s1, s2):
@@ -124,7 +123,7 @@ class QLearning(object):
         for i in range(3):
           if s1[i] != s2[i]:
               color = i + 1
-              box = s2[i] - 1
+              box = s2[i]
               return actions.index((color,box))  
 
 
@@ -168,6 +167,7 @@ class QLearning(object):
         self.converged = True
         print("The matrix has converged!")
 
+
     def update_q_matrix(self):
         alpha = 1
         gamma = 0.5
@@ -187,7 +187,6 @@ class QLearning(object):
 
         # update current state
         self.current_state = self.next_state
-
 
     def run(self):
         """
