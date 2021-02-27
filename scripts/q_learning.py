@@ -128,14 +128,35 @@ class QLearning(object):
 
 
     def get_random_action(self, step1):
+        # gets random action
         if not self.initialized:
             return
         possible_actions = self.action_matrix[step1]
         action = random.choice(possible_actions)
         while action == -1:
             action = random.choice(possible_actions)
+        
+        # sets action & next state according to random action
         self.action = action
         self.next_state = possible_actions.index(action)
+
+        # publish action
+        # determine if r/g/b dumbbell
+        if 0 <= self.action < 3:
+            db = "red"
+        elif 3 <= self.action < 6:
+            db = "green"
+        elif 6 <= self.action < 9:
+            db = "blue"
+        else:
+            print("Invalid action")
+        
+        # determine block num
+        block_num = (self.action % 3) + 1
+
+        # publish action
+        pub_action = RobotMoveDBToBlock(robot_db=db, block_id = block_num)
+        self.robot_action_pub.publish(pub_action)
 
     def robot_actions(self, data):
         pass
@@ -176,7 +197,7 @@ class QLearning(object):
         current_val = self.q_matrix.q_matrix[self.current_state].q_matrix_row[self.action]
         
         # get max value of all actions for state2
-        max_a = self.q_matrix[self.next_state].max()
+        max_a = self.q_matrix.q_matrix[self.next_state].q_matrix_row.max()
 
         # update q matrix for state1 & action_t
         self.q_matrix.q_matrix[self.current_state].q_matrix_row[self.action]  += \
@@ -200,7 +221,8 @@ class QLearning(object):
             
             # check whether we should update convergence
             self.check_convergence
-
+            
+            rospy.sleep(0.1)
             # update q matrix
             self.update_q_matrix()
         
