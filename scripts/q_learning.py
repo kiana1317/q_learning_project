@@ -2,7 +2,7 @@
 
 import rospy, cv2, cv_bridge
 import numpy as np
-# import keras_ocr
+import keras_ocr
 
 
 from gazebo_msgs.msg import ModelState, ModelStates
@@ -70,6 +70,22 @@ class QLearning(object):
         # the interface to the group of joints making up the turtlebot3
         # openmanipulator gripper
         self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
+
+        # initialize dictionaries containing dumbbell & block location
+        self.dumbbell_location = {'Red': None, 'Blue': None, 'Green': None}
+        self.block_location = {1: None, 2: None, 3: None}
+
+        # intialize image data to be able to process block/dumbbell image
+        self.image = None
+
+        # set up ROS / cv bridge
+        self.bridge = cv_bridge.CvBridge()
+
+        # initialize euler orientation (3rd value of tuple is yaw)
+        self.euler_orientation = None
+
+        # initialize pipeline for keras_ocr
+        self.pipeline = keras_ocr.pipeline.Pipeline()
 
     def move_arm(self):
         # arm_joint_goal is a list of 4 radian values, 1 for each joint
