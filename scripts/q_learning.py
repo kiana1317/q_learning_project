@@ -54,6 +54,8 @@ class QLearning(object):
 
         # Create action matrix
         self.action_matrix = [[] for x in range(64)]
+        for i in range(64):
+            self.action_matrix[i] = [0 for x in range(64)]
 
         # Initialize acton matrix
         self.initialize_action_matrix()
@@ -116,7 +118,7 @@ class QLearning(object):
         for i in range(3):
           if s1[i] != s2[i]:
               color = i + 1
-              box = s2[i] - 1
+              box = s2[i]
               return actions.index((color,box))  
 
 
