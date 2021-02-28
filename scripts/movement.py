@@ -24,6 +24,9 @@ import math
 class Movement(object):
 
     def __init__(self):
+
+        self.initialized = False
+
         # initialize this node
         rospy.init_node('robot_movement')
 
@@ -84,20 +87,26 @@ class Movement(object):
         # initialize pipeline for keras_ocr
         self.pipeline = keras_ocr.pipeline.Pipeline()
 
-        # Position the arm
-        self.move_arm()
-
         self.has_block = False
 
         self.reached_dumbbell = False
 
+        # Process dumbbells and blocks position
+        # self.process_dumbbells()
+        # self.process_blocks()
+
+        # Position the arm
+        self.move_arm()
+
+        self.dumbbell_move_in_progress = False
+
+        self.dumbbell_found = False
+
+        self.initialized = True
+
+
     def move_arm(self):
         # arm_joint_goal is a list of 4 radian values, 1 for each joint
-        # for instance,
-        #           arm_joint_goal = [0.0,0.0,0.0,0.0]
-        if not self.initialized:
-            print("Initializing...")
-            return
         arm_joint_goal = [0,
             math.radians(50.0),
             math.radians(-30),
@@ -106,16 +115,17 @@ class Movement(object):
         self.move_group_arm.go(arm_joint_goal, wait=True)
         # Calling ``stop()`` ensures that there is no residual movement
         self.move_group_arm.stop()
-
-        # gripper_joint_goal is a list of 2 radian values, 1 for the left gripper and 1 for the right gripper
         self.open_grip()
 
     def processScan(self, data):
         if not self.initialized:
             return
-
+        if not self.dumbbell_found:
+            self.find_dumbbell(data.ranges)
+            return 
+        print(data.ranges)
         # Move the robot to the dumbbell
-        if data.ranges[0] < 0.27 and not self.reached_dumbbell:
+        if data.ranges[0] < 0.2 and not self.reached_dumbbell:
             self.twist.linear.x = 0
             self.twist.angular.z = 0
             self.cmd_vel_pub.publish(self.twist)
@@ -132,17 +142,69 @@ class Movement(object):
             self.close_grip()
             self.lift_dumbbell()
             self.has_block = True
-        dumbell_pos = 1 # 2:right, 1:center, 0:left
-        # Find block
-        # for deg in range(0,len(data.ranges)):
-        #     if deg == 0 or 
-        self.twist.linear.x = 0
-        self.twist.angular.z = 0.8
-        self.cmd_vel_pub.publish(self.twist)
-        rospy.sleep(4)
-        self.twist.linear.x = 0
-        self.twist.angular.z = 0.0
-        self.cmd_vel_pub.publish(self.twist)
+
+    def find_dumbbell(self, ranges):
+        # Get the center dumbbell
+        # end_not_found = True
+        beg_not_found = True
+        deg_beg = 0
+        deg_end = 0
+        print(ranges)
+        angles = list(range(269,360)) + list(range(0,90))
+        for i in angles:
+            if ranges[i] != float("inf") and beg_not_found:
+                deg_beg = i
+                beg_not_found = False
+                print("Beginning Found!")
+            elif ranges[i] == float("inf") and not beg_not_found:
+                deg_end = i
+                break
+        
+        print(deg_beg)
+        print(deg_end)
+        if deg_end < deg_beg:
+            center_of_object = ranges.index(min(ranges[deg_beg:] + ranges[:deg_end]))
+        else:
+            center_of_object = ranges.index(min(ranges[deg_beg:deg_end]))
+        print("Center of object: " + str(center_of_object))
+        if center_of_object > 179:
+            center_of_object -= 360
+        self.target_turn(center_of_object)
+        self.dumbbell_found = True
+
+    # def old_processScan(self, data):
+    #     if not self.initialized:
+    #         return
+
+    #     # Move the robot to the dumbbell
+    #     if data.ranges[0] < 0.05 and not self.reached_dumbbell:
+    #         self.twist.linear.x = 0
+    #         self.twist.angular.z = 0
+    #         self.cmd_vel_pub.publish(self.twist)
+    #         self.reached_dumbbell = True
+    #     elif not self.reached_dumbbell:
+    #         self.twist.linear.x = 0.1
+    #         self.twist.angular.z = 0
+    #         self.cmd_vel_pub.publish(self.twist)
+    #         return 
+        
+    #     # At Dumbell
+    #     # Close grip
+    #     if not self.has_block:
+    #         self.close_grip()
+    #         self.lift_dumbbell()
+    #         self.has_block = True
+    #     # dumbell_pos = 1 # 2:right, 1:center, 0:left
+    #     # Find block
+    #     # for deg in range(0,len(data.ranges)):
+    #     #     if deg == 0 or 
+    #     self.twist.linear.x = 0
+    #     self.twist.angular.z = 0.8
+    #     self.cmd_vel_pub.publish(self.twist)
+    #     rospy.sleep(4)
+    #     self.twist.linear.x = 0
+    #     self.twist.angular.z = 0.0
+    #     self.cmd_vel_pub.publish(self.twist)
 
     def close_grip(self):
         # close grip
@@ -159,7 +221,7 @@ class Movement(object):
     def lift_dumbbell(self):
         arm_joint_goal = [0,
             math.radians(-10.0),
-            math.radians(-30),
+            math.radians(-20),
             math.radians(-20)]
         # wait=True ensures that the movement is synchronous
         self.move_group_arm.go(arm_joint_goal, wait=True)
@@ -247,9 +309,10 @@ class Movement(object):
         # initalize k, convert target to radians, & get yaw
         k = 0.5
         target_rad = target * math.pi / 180
-        
+        # self.twist.linear.x = 0
         # keep turning until reaches target
-        while abs(target_rad - self.euler_orientation[2]) > 0.05:
+        # while abs(target_rad - self.euler_orientation[2]) > 0.05: - Original Kiana
+        while abs(target_rad - self.euler_orientation[2]) > 0.02:
             self.twist.angular.z = k * (target_rad - self.euler_orientation[2])
             self.cmd_vel_pub.publish(self.twist)
 
