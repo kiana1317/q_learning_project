@@ -104,19 +104,6 @@ class Movement(object):
 
         self.initialized = True
 
-
-    def move_arm(self):
-        # arm_joint_goal is a list of 4 radian values, 1 for each joint
-        arm_joint_goal = [0,
-            math.radians(50.0),
-            math.radians(-30),
-            math.radians(-20)]
-        # wait=True ensures that the movement is synchronous
-        self.move_group_arm.go(arm_joint_goal, wait=True)
-        # Calling ``stop()`` ensures that there is no residual movement
-        self.move_group_arm.stop()
-        self.open_grip()
-
     def processScan(self, data):
         if not self.initialized:
             return
@@ -124,15 +111,21 @@ class Movement(object):
             self.find_dumbbell(data.ranges)
             return 
         print(data.ranges)
+        # Check if the robot is approaching the dumbbell correctly
+
         # Move the robot to the dumbbell
-        if data.ranges[0] < 0.2 and not self.reached_dumbbell:
+        if data.ranges[0] < 0.27 and not self.reached_dumbbell:
             self.twist.linear.x = 0
             self.twist.angular.z = 0
             self.cmd_vel_pub.publish(self.twist)
             self.reached_dumbbell = True
         elif not self.reached_dumbbell:
+            turn_angle = data.ranges.index(min(data.ranges[-5:] + data.ranges[:5]))
+            k = 0.05
+            if turn_angle > 270:
+                k = k * -1
             self.twist.linear.x = 0.1
-            self.twist.angular.z = 0
+            self.twist.angular.z = k
             self.cmd_vel_pub.publish(self.twist)
             return 
         
@@ -206,6 +199,19 @@ class Movement(object):
     #     self.twist.angular.z = 0.0
     #     self.cmd_vel_pub.publish(self.twist)
 
+    def move_arm(self):
+        # arm_joint_goal is a list of 4 radian values, 1 for each joint
+        arm_joint_goal = [0,
+            math.radians(50.0),
+            math.radians(-30),
+            math.radians(-20)]
+        # wait=True ensures that the movement is synchronous
+        self.move_group_arm.go(arm_joint_goal, wait=True)
+        # Calling ``stop()`` ensures that there is no residual movement
+        self.move_group_arm.stop()
+        self.open_grip()
+
+
     def close_grip(self):
         # close grip
         gripper_joint_goal = [.007,.007]
@@ -220,7 +226,7 @@ class Movement(object):
 
     def lift_dumbbell(self):
         arm_joint_goal = [0,
-            math.radians(-10.0),
+            math.radians(0.0),
             math.radians(-20),
             math.radians(-20)]
         # wait=True ensures that the movement is synchronous
@@ -311,7 +317,6 @@ class Movement(object):
         target_rad = target * math.pi / 180
         # self.twist.linear.x = 0
         # keep turning until reaches target
-        # while abs(target_rad - self.euler_orientation[2]) > 0.05: - Original Kiana
         while abs(target_rad - self.euler_orientation[2]) > 0.02:
             self.twist.angular.z = k * (target_rad - self.euler_orientation[2])
             self.cmd_vel_pub.publish(self.twist)
