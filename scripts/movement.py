@@ -97,34 +97,77 @@ class Movement(object):
         # self.process_blocks()
 
         # Position the arm
-        self.move_arm()
+        self.starting_arm_position()
 
         # Action Sequence based on Convergence (color, box)
         # 1 = red, 2 = green, 3 = blue
-        self.action_sequence = [('Red',2),('Blue',1),('Green',3)]
+        self.action_sequence = [('Green',1),('Blue',3),('Red',2)]
         self.moved_dumbbells = []
         # for testing
         self.dumbbell_location = {'Red': 'R', 'Blue': 'C', 'Green': 'L'}
         self.block_location = {1: 'L', 2: 'C', 3: 'R'}
-
+        
+        self.block_center={'L':None,'C':None,'R':None}
         # self.actions_completed = 0
+        
         self.dumbbell_move_in_progress = False
         self.dumbbell_found = False
         self.block_found = False
         self.passed_block_hold =False
+        self.reseting = False
 
         self.initialized = True
 
     def processScan(self, data):
-        locs = {'R':0, 'C':1, 'L':2}
+        
         if not self.initialized:
             return
-        if not self.dumbbell_move_in_progress:
-            color = self.action_sequence[len(self.moved_dumbbells)][0]
-            loc = self.dumbbell_location[color]
-            pos = locs[loc]
-            self.find_dumbbell(data.ranges,pos)
-            self.dumbbell_move_in_progress = True
+        if self.reseting:
+            return 
+        
+        # Populate Approximate locations of the box
+        if self.block_center['C'] == None:
+            object_end = 0
+            object_beg = 0
+            object_found = False
+            objects = []
+            for i in list(range(89,269)) :
+                if data.ranges[i] != float('inf') and not object_found:
+                    object_beg = i
+                    object_found = True 
+                elif data.ranges[i] == float('inf') and object_found:
+                    object_end = i
+                    objects.append((object_end,object_beg))
+                    object_found = False
+            if len(objects) != 3:
+                print("Oops!  That was no valid number.  Try again...")
+                print(objects)
+                exit
+            self.block_center['R'] = (objects[0][0] + objects[0][1]) / 2
+            self.block_center['C'] = (objects[1][0] + objects[1][1]) / 2
+            self.block_center['L'] = (objects[2][0] + objects[2][1]) / 2
+            if self.block_center['R'] > 179:
+                self.block_center['R'] -= 360
+            if self.block_center['C'] > 179:
+                self.block_center['C'] -= 360
+            if self.block_center['L'] > 179:
+                self.block_center['L'] -= 360
+            print(self.block_center)
+            
+        # Convert action sequence to tangible values
+        locs = {'R':0, 'C':1, 'L':2}
+        
+        color = self.action_sequence[len(self.moved_dumbbells)][0]
+        block = self.action_sequence[len(self.moved_dumbbells)][1]
+
+        color_loc = self.dumbbell_location[color]
+        block_loc = self.block_location[block]
+
+        color_pos = locs[color_loc]
+        block_pos = locs[block_loc]
+        # Locate the dumbbell next in the sequence
+        if not self.dumbbell_found:
+            self.find_dumbbell(data.ranges,color_pos)
             self.dumbbell_found = True
             return 
 
@@ -137,9 +180,15 @@ class Movement(object):
 
             self.close_grip()
             self.lift_dumbbell()
-            self.target_turn(179)
+            # self.target_turn(179)
+            turn_angles = {0:-25,1:0,2:25}
+            self.return_to_center(turn_angles[color_pos], 179)
             self.has_block = True 
+            self.reached_dumbbell = True
+            print(data.ranges)
+            print(data.ranges[-269:] + data.ranges[:90])
             return
+
         elif not self.reached_dumbbell:
             k = 0.1 * self.dumbbell_center(data.ranges, 15)
             self.twist.linear.x = 0.1
@@ -147,63 +196,111 @@ class Movement(object):
             self.cmd_vel_pub.publish(self.twist)
             return 
 
+        angles = {0:130, 1:179, 2:-130}
+        angle = angles[block_pos]
         if not self.block_found:
-            self.twist.linear.x = 0.2
-            self.cmd_vel_pub.publish(self.twist)
-            rospy.sleep(5)
-            self.twist.linear.x = 0.0
-            self.cmd_vel_pub.publish(self.twist)
-
-            block = self.action_sequence[len(self.moved_dumbbells)][1]
-            loc = self.block_location[block]
-            pos = locs[loc]
-            angles = {0:130, 1:179, 2:-130}
-            self.target_turn(angles[pos])
+            self.target_turn(self.block_center[block_loc] +15)
+            print(data.ranges)
+            print(data.ranges[-269:] + data.ranges[:90])
             # self.twist.linear.x = 0.2
             # self.cmd_vel_pub.publish(self.twist)
-            # rospy.sleep(3)
+            # rospy.sleep(5)
+            # self.twist.linear.x = 0.0
+            # self.cmd_vel_pub.publish(self.twist)
+            
+            # self.target_turn(angle)
+            # if abs(color_pos - pos) == 2:
+            #     self.twist.linear.x = 0.6
+            #     self.cmd_vel_pub.publish(self.twist)
+            #     rospy.sleep(3)
+            # else:
+            #     self.twist.linear.x = 0.4
+            #     self.cmd_vel_pub.publish(self.twist)
+            #     rospy.sleep(3)
             # self.find_dumbbell(data.ranges,pos)
             self.block_found = True
             return
+
         # Move the robot to the block, and place the dumbbell down
         # try to tell if robot is approaching wall, given block is held
-        area_around_dumbbell =  data.ranges[-30:] + data.ranges[:31]
-        valid_nums_only = [i for i in area_around_dumbbell if i != float("inf")]
-        # close_nums_only = [i for i in valid_nums_only if i < 0.2]
-    
-        # if len(valid_nums_only) != 0 and max(valid_nums_only) > 0.1:
-        #     k = 0.1 * self.dumbbell_center(data.ranges, 30)
-        #     self.twist.linear.x = 0.1 * k
-        #     self.twist.angular.z = k
-        #     self.cmd_vel_pub.publish(self.twist)
-        #     return 
-        print(data.ranges)
-
-        if (self.has_block and (len(valid_nums_only) != len(area_around_dumbbell) or max(valid_nums_only) < 2)) and not self.passed_block_hold:
-            k = 0.5 * self.dumbbell_center(data.ranges, 60)
+ 
+        if data.ranges[0] == float("inf"):
+            k = 0.5 * self.find_block_center(data.ranges, 30, angle)
             self.twist.linear.x = 0.1
-            self.twist.angular.z = k
+            self.twist.angular.z = 0.1 * k
+            return
+        surrounding_blocks = data.ranges[0:10] + data.ranges[-9:]
+        surrounding_valid_blocks = [x for x in surrounding_blocks if x != float("inf")]
+        if self.has_block and max(surrounding_valid_blocks) < 1 and not self.passed_block_hold:
+            k = 0.5 * self.find_block_center(data.ranges, 20, angle)
+            self.twist.linear.x = 0.1
+            self.twist.angular.z = 0
             self.cmd_vel_pub.publish(self.twist)
             return
-
+        print(data.ranges)
         self.passed_block_hold = True 
-        
-        if data.ranges[0] < 0.5:
+
+        if self.has_block and data.ranges[0] < 0.5:
+            self.reseting = True
             self.twist.linear.x = 0.0
             self.twist.angular.z = 0
             self.cmd_vel_pub.publish(self.twist)
             self.place_dumbbell()
             self.target_turn(0)
+            
             self.has_block = False
+            self.reset_positons()
             return 
 
         elif self.has_block:
-            k = 0.5 * self.dumbbell_center(data.ranges, 60)
+            k = 1 * self.find_block_center(data.ranges, 60,angle)
             self.twist.linear.x = 0.1
             self.twist.angular.z = k
             self.cmd_vel_pub.publish(self.twist)
             return
     
+    def reset_positons(self):
+        # Move to center
+        self.twist.linear.x = 0.4
+        self.cmd_vel_pub.publish(self.twist)
+        rospy.sleep(3)
+
+        # Move arm back in positon
+        self.starting_arm_position()
+
+        # reinitialize variables
+        self.dumbbell_move_in_progress = False
+        self.dumbbell_found = False
+        self.block_found = False
+        self.passed_block_hold =False
+        self.has_block = False
+        self.reached_dumbbell = False
+        self.reached_block = False
+        self.reseting = False
+    
+    #  for outer dumbbells, angle = ~25
+    def return_to_center(self,angle, dir):
+        return_angle = 179 + angle 
+        if return_angle > 179:
+            return_angle -= 360
+        turning = True
+        while turning:
+            self.target_turn(return_angle)
+            turning = False
+
+        self.twist.linear.x = 0.3
+        self.twist.angular.z = 0.0
+        self.cmd_vel_pub.publish(self.twist)
+        rospy.sleep(3)
+        self.twist.angular.z = 0.0
+        self.twist.linear.x = 0.0
+        self.cmd_vel_pub.publish(self.twist)
+        # turning = True
+        # while turning:
+        #     self.target_turn(dir)
+        #     turning = False
+
+
     def dumbbell_center(self, ranges, bound):
         angles = ranges[-bound:] + ranges[:bound]
         center_angle = ranges.index(min(angles))
@@ -212,12 +309,39 @@ class Movement(object):
         turn = center_angle/bound
         return turn
 
+    def find_block_center(self, ranges, bound, angle):
+        adjustments = {130:-1, 179:0, -130:1}
+        center_angle = 0
+        if ranges[0] == float("inf"):
+            for i in range(1, bound):
+                if ranges[i] != float("inf"):
+                    center_angle = i
+                    break 
+                elif ranges[-i] != float("inf"):
+                    center_angle = -i
+                    break 
+        
+        else:
+            front_obj = 0
+            back_obj = 0
+
+            for i in range(1,bound):
+                if ranges[i] != float("inf") and front_obj == 0:
+                    front_obj = i
+                if ranges[-i] != float("inf") and back_obj == 0:
+                    back_obj = -i
+            center_angle = (front_obj + back_obj) /2
+            
+        turn = center_angle/bound 
+        return turn
+
     def find_dumbbell(self, ranges, pos):
-        print(ranges)
+        # Tracks the objects found 
         object_not_found = True
         object_start = 0
         object_end = 0
         objects=[]
+
         # Scan 180 degrees
         angles = list(range(269,360)) + list(range(0,90))
         for i in angles:
@@ -227,9 +351,9 @@ class Movement(object):
             elif ranges[i] == float("inf") and not object_not_found:
                 object_end = i
                 objects.append((object_start,object_end))
-                if len(objects) == 3:
-                    break
+                object_not_found = True
 
+        # Check if any dumbbells have already moved
         if 'R' in self.moved_dumbbells:
             if 'C' in self.moved_dumbbells:
                 object_start = objects[0][0]
@@ -244,20 +368,22 @@ class Movement(object):
             object_start = objects[pos][0]
             object_end = objects[pos][1]
 
+        # Create a list just containing the position of the object
         if object_end < object_start:
             center_of_object = ranges.index(min(ranges[object_start:] + ranges[:object_end]))
         else:
             center_of_object = ranges.index(min(ranges[object_start:object_end]))
-        if self.dumbbell_found:
-            center_of_object += 179
-        while center_of_object > 179:
+        
+        # Normalize to 179 degrees
+        if center_of_object > 179:
             center_of_object -= 360
-        print(center_of_object)
+
+        # Turn towards object
         self.target_turn(center_of_object)
         
 
 
-    def move_arm(self):
+    def starting_arm_position(self):
         arm_joint_goal = [0,.4,.5,-.9]
         self.move_group_arm.go(arm_joint_goal, wait=True)
         self.move_group_arm.stop()
@@ -279,29 +405,21 @@ class Movement(object):
             math.radians(0.0),
             math.radians(-20),
             math.radians(-20)]
-        # wait=True ensures that the movement is synchronous
         self.move_group_arm.go(arm_joint_goal, wait=True)
-        # Calling ``stop()`` ensures that there is no residual movement
         self.move_group_arm.stop()
 
     def place_dumbbell(self):
         self.open_grip()
-        # Lower the dumbbel to ground level
         arm_joint_goal = [0,.4,.5,-.9]
-        # arm_joint_goal = [0,
-        #     math.radians(0.0),
-        #     math.radians(-40.0),
-        #     math.radians(-20.0)]
-        # wait=True ensures that the movement is synchronous
         self.move_group_arm.go(arm_joint_goal, wait=True)
-        # Calling ``stop()`` ensures that there is no residual movement
         self.move_group_arm.stop()
-        
+        # Reverse away from the dumbbbell
         self.twist.linear.x = -0.2
         self.twist.angular.z = 0.0
         self.cmd_vel_pub.publish(self.twist)
-        rospy.sleep(1)
+        rospy.sleep(2)
         self.twist.linear.x = 0.0
+        self.twist.angular.z = 0.0
         self.cmd_vel_pub.publish(self.twist)
 
 
