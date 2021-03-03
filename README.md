@@ -20,6 +20,7 @@ Describe how you accomplished each of the following components of the Q-learning
 Describe how you accomplished each of the following components of the perception elements of this project in 1-3 sentences, any online sources of information/code that helped you to recognize the objects, and also describe what functions / sections of the code executed each of these components (1-3 sentences per function / portion of code):
 
 *Identifying the locations and identities of each of the colored dumbbells*
+
 For our implementation, we used color perception to find the dumbbell necessary for the current action. To do so, we first set the upper and lower color spectrum ranges based off which color we were pursuing and generated a pixel mask for that color. Then, we rotated the robot in a constant z-angular shift until that color came into the robot’s line of sight. 
 
 ```process_dumbbells()```: Implements the process of rotating the robot until the dumbbell is spotted using the color recognition methods from the Line Follower exercise. After the robot spots the dumbbell, the program implements PID to center the robot on the dumbbell as it moves to pickup it.
