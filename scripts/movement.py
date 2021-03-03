@@ -52,8 +52,8 @@ class Movement(object):
         # ROS subscribe to Image topic to get rgb images
         rospy.Subscriber('camera/rgb/image_raw',Image, self.image_callback)
 
-        # ROS subscribe to Odometry to get pose information
-        rospy.Subscriber('/odom', Odometry, self.get_rotation)
+        # # ROS subscribe to Odometry to get pose information
+        # rospy.Subscriber('/odom', Odometry, self.get_rotation)
 
         # ROS publish to Q Matrix to update Q-Learning Matrix
         self.q_matrix_pub = rospy.Publisher("/q_learning/q_matrix", QMatrix, queue_size=10)
@@ -71,64 +71,35 @@ class Movement(object):
         # openmanipulator gripper
         self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
 
-        # initialize dictionaries containing dumbbell & block location
-        self.dumbbell_location = {'Red': None, 'Blue': None, 'Green': None}
-        self.block_location = {1: None, 2: None, 3: None}
-
         # intialize image data to be able to process block/dumbbell image
         self.image = None
 
         # set up ROS / cv bridge
         self.bridge = cv_bridge.CvBridge()
 
-        # initialize euler orientation (3rd value of tuple is yaw)
-        self.euler_orientation = None
+        # # initialize euler orientation (3rd value of tuple is yaw)
+        # self.euler_orientation = None
 
         # initialize pipeline for keras_ocr
         self.pipeline = keras_ocr.pipeline.Pipeline()
-
-        self.has_dumbbell = False
-
-        self.reached_dumbbell = False
-        self.reached_block = False
-
-        # Process dumbbells and blocks position
-        # self.process_dumbbells()
-        # self.process_blocks()
 
         # Position the arm
         self.starting_arm_position()
 
         # Action Sequence based on Convergence (color, box)
         # 1 = red, 2 = green, 3 = blue
-        self.action_sequence = [('Blue',2),('Red',1),('Green',3)]
+        self.action_sequence = [('Blue',2),('Red',3),('Green',1)]
         self.moved_dumbbells = 0
-        
-        # for testing
-        self.dumbbell_location = {'Red': 'R', 'Blue': 'C', 'Green': 'L'}
-        self.block_location = {1: 'L', 2: 'C', 3: 'R'}
-        
-        self.block_center={'L':None,'C':None,'R':None}
-        # self.actions_completed = 0
-        
-        self.dumbbell_move_in_progress = False
-        self.dumbbell_found = False
         self.block_found = False
-        self.passed_block_hold =False
         self.reseting = False
         self.scanDataRanges = []
-
-        self.picked_up_block = False
-        self.lowered_block = False 
         self.has_dumbbell = False
         self.placed_dumbbell = False
         self.passed_blocks = set()
         self.shift = True
 
-        # States
-        # Find db, move to dumbbell towads dumbbell, picking-up dumbbell, finding
-
         self.initialized = True
+
     def complete_action(self):
         if not self.has_dumbbell:
             self.process_dumbbells()
@@ -139,7 +110,7 @@ class Movement(object):
         elif self.reseting:
             self.reset()
             return
-        
+    
 
     def processScan(self, data):
         if not self.initialized:
@@ -147,8 +118,6 @@ class Movement(object):
         # Store global scan data
         self.scanDataRanges = data.ranges
         
-
- 
     
     def reset(self):
         # reinitialize variables
@@ -156,6 +125,8 @@ class Movement(object):
         self.placed_dumbbell = False
         self.block_found = False
         self.reseting = False
+        self.shift = True
+        self.passed_blocks = set()
 
     def starting_arm_position(self):
         arm_joint_goal = [0,.4,.5,-.9]
@@ -268,29 +239,6 @@ class Movement(object):
             self.twist.angular.z = 0.2
             self.cmd_vel_pub.publish(self.twist)
 
-    def get_rotation(self, data):
-        # get yaw from rotation data
-        q = data.pose.pose.orientation
-        orientation_list = [q.x, q.y, q.z, q.w]
-        self.euler_orientation = euler_from_quaternion(orientation_list)
-
-    def target_turn(self, target):
-        # turns turtlebot to target yaw 
-        
-        # initalize k, convert target to radians, & get yaw
-        k = 0.5
-        target_rad = target * math.pi / 180
-        # self.twist.linear.x = 0
-        # keep turning until reaches target
-        while abs(target_rad - self.euler_orientation[2]) > 0.03:
-            self.twist.angular.z = k * (target_rad - self.euler_orientation[2])
-            self.cmd_vel_pub.publish(self.twist)
-
-        # stop once target reached
-        self.twist.angular.z = 0
-        self.cmd_vel_pub.publish(self.twist)
-        
-
     def process_blocks(self):
         if not self.scanDataRanges:
             return
@@ -315,7 +263,7 @@ class Movement(object):
         # No number is currently in view
         if M['m00'] <= 0:
             self.twist.linear.x = 0
-            self.twist.angular.z = 0.3
+            self.twist.angular.z = 0.4
             self.cmd_vel_pub.publish(self.twist)  
             return
         # Already Found block
@@ -344,8 +292,8 @@ class Movement(object):
                 cx = M['m10']/M['m00']
                 cy = M['m01']/M['m00']
                 err = w/2 - cx
-                k_p = 0.0001
-                self.twist.linear.x = 0.1
+                k_p = 0.001
+                self.twist.linear.x = 0.2
                 self.twist.angular.z = k_p * err
                 self.cmd_vel_pub.publish(self.twist)
                 return
@@ -368,8 +316,7 @@ class Movement(object):
             return
 
 
-        # if nums_detected
-        
+        # Possible predictions
         num_predictions ={
             "1":1,
             "2":2,
