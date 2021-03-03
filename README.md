@@ -1,6 +1,40 @@
-# q_learning_project
+# Q Learning Project
 
-Team Members: Kiana Hobbs & Hunter Thompson
+## Team Members
+Kiana Hobbs & Hunter Thompson
+
+## Objectives Description 
+(2-3 sentences): Describe the goal of this project.
+
+## High-level  Description
+(1 paragraph): At a high-level, describe how you used reinforcement learning to solve the task of determining which dumbbells belong in front of each numbered block.
+
+## Q-learning algorithm description: 
+Describe how you accomplished each of the following components of the Q-learning algorithm in 1-3 sentences, and also describe what functions / sections of the code executed each of these components(1-3 sentences per function / portion of code):
+* Selecting and executing actions for the robot (or phantom robot) to take
+* Updating the Q-matrix
+* Determining when to stop iterating through the Q-learning algorithm
+* Executing the path most likely to lead to receiving a reward after the Q-matrix has converged on the simulated Turtlebot3 robot
+
+## Robot perception description
+Describe how you accomplished each of the following components of the perception elements of this project in 1-3 sentences, any online sources of information/code that helped you to recognize the objects, and also describe what functions / sections of the code executed each of these components (1-3 sentences per function / portion of code):
+* Identifying the locations and identities of each of the colored dumbbells
+* Identifying the locations and identities of each of the numbered blocks
+* 
+# Robot manipulation and movement
+Describe how you accomplished each of the following components of the robot manipulation and movement elements of this project in 1-3 sentences, and also describe what functions / sections of the code executed each of these components (1-3 sentences per function / portion of code):
+* Moving to the right spot in order to pick up a dumbbell
+* Picking up the dumbbell
+* Moving to the desired destination (numbered block) with the dumbbell
+* Putting the dumbbell back down at the desired destination
+
+# Challenges 
+(1 paragraph) Describe the challenges you faced and how you overcame them.
+
+# Future work 
+(1 paragraph): If you had more time, how would you improve your implementation?
+# Takeaways 
+(at least 2 bullet points with 2-3 sentences per bullet point): What are your key takeaways from this project that would help you/others in future robot programming assignments working in pairs? For each takeaway, provide a few sentences of elaboration.
 
 # Implementation Plan
 
