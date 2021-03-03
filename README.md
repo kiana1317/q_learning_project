@@ -26,27 +26,31 @@ For our implementation, we used color perception to find the dumbbell necessary 
 
 *Identifying the locations and identities of each of the numbered blocks*
 
+After the robot retrieves the dumbbell, it begins scanning at first for the color black with color perception to signify the presence of a numbered block, and then it uses the Keras number recognition to check if the block matches the block in the action sequence. These two forms of perception were used together to reduce the need for calling the Keras image recognition process, given it produced delayed results.
+
+```process_blocks():``` Implements the process for rotating the robot until it perceives first a number with color perception and then if it is the correct number with image perception. The robot stops after finding a block to allow time for the image to completely process before proceeding. After finding and confirming the block, the program implements PID with perceiving black to center the robot on the block.
+
 ## Robot manipulation and movement
 
 *Moving to the right spot in order to pick up a dumbbell*
 
-To navigate the robot to the right spot, we used color perception to scan for the desired dumbbell color. Once the dumbbell was identified, we used the logic from the Line Follower code to keep the robot centered as it approached the dumbbell.
+To navigate the robot to the right spot, we used color perception to scan for the desired dumbbell color. Once the dumbbell was identified, we used the logic from the Line Follower code to keep the robot centered as it approached the dumbbell. This functionality was implemented in the ```process_dumbells():``` function mentioned in perception.
 
 *Picking up the dumbbell*
 
-To pick up the dumbbell, we experimented using the arm UI to see which arm positioning works best for both gripping and lifting the dumbbell. For gripping, we had to ensure that the robot approached the dumbbell centered, given the gripper has a limited extension width. Moreover, for the lifting, we had to guarantee that the end positioning allowed the robot to maneuver without dropping the dumbbell.
+To pick up the dumbbell, we experimented using the arm UI to see which arm positioning works best for both gripping and lifting the dumbbell. For gripping, we had to ensure that the robot approached the dumbbell centered, given the gripper has a limited extension width. Moreover, for the lifting, we had to guarantee that the end positioning allowed the robot to maneuver without dropping the dumbbell. 
 
-```lift_dumbbell()```:  Function that implements the lift dumbbell mechanic mentioned above.
+```lift_dumbbell()```:  Function that implements the lift dumbbell mechanic mentioned above. This functionality was called in the ```process_dumbells():``` function mentioned in perception.
 
 *Moving to the desired destination (numbered block) with the dumbbell*
 
-To move to the desired numbered block, we had to employ a combination of image and color perception. While rotating, we used color perception for perceiving black to determine if the robot was facing a block. Then, we used image perception to determine which number it was facing. Once the block was confirmed, we utilized color perception again to keep the robot centered while approaching the block.
+To move to the desired numbered block, we had to employ a combination of image and color perception. While rotating, we used color perception for perceiving black to determine if the robot was facing a block. Then, we used image perception to determine which number it was facing. Once the block was confirmed, we utilized color perception again to keep the robot centered while approaching the block. This functionality was implemented in the ```process_blocks():``` function mentioned in perception.
 
 *Putting the dumbbell back down at the desired destination*
 
 Once the robot was in a short distance of the block, we opened the gripper and then lowered the arm to allow the block to fall to the ground with control.  
 
-```place_dumbbell():``` Function that implements the place dumbbell mechanic mentioned above.
+```place_dumbbell():``` Function that implements the place dumbbell mechanic mentioned above. This functionality was called in the ```process_blocks():``` function mentioned in perception.
 
 #### Functions
 Noted generally here because they were used for more than one action related to robot manipulation and movement.
