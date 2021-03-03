@@ -18,10 +18,11 @@ Describe how you accomplished each of the following components of the Q-learning
 
 ## Robot perception description
 Describe how you accomplished each of the following components of the perception elements of this project in 1-3 sentences, any online sources of information/code that helped you to recognize the objects, and also describe what functions / sections of the code executed each of these components (1-3 sentences per function / portion of code):
+
 *Identifying the locations and identities of each of the colored dumbbells*
 
 *Identifying the locations and identities of each of the numbered blocks*
-# Robot manipulation and movement
+## Robot manipulation and movement
 
 *Moving to the right spot in order to pick up a dumbbell*
 
