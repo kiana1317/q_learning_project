@@ -347,8 +347,6 @@ class Movement(object):
             self.cmd_vel_pub.publish(self.twist)  
             rospy.sleep(2)
             return
-       
-
 
     def robot_actions(self, data):
         pass
