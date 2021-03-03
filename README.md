@@ -23,6 +23,7 @@ Describe how you accomplished each of the following components of the perception
 * 
 # Robot manipulation and movement
 Describe how you accomplished each of the following components of the robot manipulation and movement elements of this project in 1-3 sentences, and also describe what functions / sections of the code executed each of these components (1-3 sentences per function / portion of code):
+
 *Moving to the right spot in order to pick up a dumbbell*
 
 To navigate the robot to the right spot, we used color perception to scan for the desired dumbbell color. Once the dumbbell was identified, we used the logic from the Line Follower code to keep the robot centered as it approached the dumbbell.
@@ -31,13 +32,26 @@ To navigate the robot to the right spot, we used color perception to scan for th
 
 To pick up the dumbbell, we experimented using the arm UI to see which arm positioning works best for both gripping and lifting the dumbbell. For gripping, we had to ensure that the robot approached the dumbbell centered, given the gripper has a limited extension width. Moreover, for the lifting, we had to guarantee that the end positioning allowed the robot to maneuver without dropping the dumbbell.
 
-* Moving to the desired destination (numbered block) with the dumbbell*
+*Moving to the desired destination (numbered block) with the dumbbell*
 
 To move to the desired numbered block, we had to employ a combination of image and color perception. While rotating, we used color perception for perceiving black to determine if the robot was facing a block. Then, we used image perception to determine which number it was facing. Once the block was confirmed, we utilized color perception again to keep the robot centered while approaching the block.
 
-* Putting the dumbbell back down at the desired destination*
+*Putting the dumbbell back down at the desired destination*
 
 Once the robot was in a short distance of the block, we opened the gripper and then lowered the arm to allow the block to fall to the ground with control.  
+
+#### Functions
+Noted generally here because they were used for more than one action related to robot manipulation and movement.
+    ```complete_action()```: Iterates through the action sequence for each dumbbell.
+   ```processScan()```: Populates the scan data ranges for each function to use.
+    ```reset()```: Resets the variables, such as Booleans and counters, after each iterations.
+    ```starting_arm_position()```: Positions the arm in the starting positions to be best able to grip the dumbbells.
+    ```close_grip()```: Closes the grip slightly to prevent the dumbbell from moving around while the robot is moving. For this function we had to experiment with the manipulator UI to find a balance to prevent the gripper from closing too much to push out the dumbbell.
+ ```open_grip()```: Opens the grip to place the dumbbell once it reaches the block.
+    ```lift_dumbbell()```:  Function that implements lift dumbbell mechanic mentioned above.
+   ```place_dumbbell():``` Function that implements the place dumbbell mechanic mentioned above.
+    ```image_callback()```: Stores the image information processed by the robot.
+
 
 # Challenges 
 (1 paragraph) Describe the challenges you faced and how you overcame them.
