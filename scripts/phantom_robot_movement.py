@@ -42,6 +42,8 @@ class PhantomRobotMovement(object):
         # information about the robot action to take
         self.robot_action_queue = []
 
+        self.iteration = 1
+
         # numbered block model names
         self.numbered_block_model_names = {
             1: "number1",
@@ -120,7 +122,8 @@ class PhantomRobotMovement(object):
 
 
     def prepare_to_take_robot_action(self, data):
-        # print(data)
+        print("iteration #", self.iteration)
+        self.iteration += 1
         self.robot_action_queue.append(RobotAction(data.robot_db, data.block_id))
 
 
