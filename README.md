@@ -77,6 +77,7 @@ Noted generally here because they were used for more than one action related to 
 (1 paragraph): If you had more time, how would you improve your implementation?
 # Takeaways 
 (at least 2 bullet points with 2-3 sentences per bullet point): What are your key takeaways from this project that would help you/others in future robot programming assignments working in pairs? For each takeaway, provide a few sentences of elaboration.
+* For centering objects, perception it the best way to go - Before using perception, we tried to employ various techniques for finding the center of the blocks, such as scanning for the width of the object and finding the center based off that. However, while that did work for centering on the dumbbells, it proved difficult for approaching the block when we wanted to place the dumbbell at the face of the block.
 
 # Implementation Plan
 
