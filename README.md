@@ -42,16 +42,24 @@ Once the robot was in a short distance of the block, we opened the gripper and t
 
 #### Functions
 Noted generally here because they were used for more than one action related to robot manipulation and movement.
-    ```complete_action()```: Iterates through the action sequence for each dumbbell.
-   ```processScan()```: Populates the scan data ranges for each function to use.
-    ```reset()```: Resets the variables, such as Booleans and counters, after each iterations.
-    ```starting_arm_position()```: Positions the arm in the starting positions to be best able to grip the dumbbells.
-    ```close_grip()```: Closes the grip slightly to prevent the dumbbell from moving around while the robot is moving. For this function we had to experiment with the manipulator UI to find a balance to prevent the gripper from closing too much to push out the dumbbell.
- ```open_grip()```: Opens the grip to place the dumbbell once it reaches the block.
-    ```lift_dumbbell()```:  Function that implements lift dumbbell mechanic mentioned above.
-   ```place_dumbbell():``` Function that implements the place dumbbell mechanic mentioned above.
-    ```image_callback()```: Stores the image information processed by the robot.
 
+    ```complete_action()```: Iterates through the action sequence for each dumbbell.
+    
+   ```processScan()```: Populates the scan data ranges for each function to use.
+   
+    ```reset()```: Resets the variables, such as Booleans and counters, after each iterations.
+    
+    ```starting_arm_position()```: Positions the arm in the starting positions to be best able to grip the dumbbells.
+    
+    ```close_grip()```: Closes the grip slightly to prevent the dumbbell from moving around while the robot is moving. For this function we had to experiment with the manipulator UI to find a balance to prevent the gripper from closing too much to push out the dumbbell.
+    
+ ```open_grip()```: Opens the grip to place the dumbbell once it reaches the block.
+ 
+    ```lift_dumbbell()```:  Function that implements lift dumbbell mechanic mentioned above.
+    
+   ```place_dumbbell():``` Function that implements the place dumbbell mechanic mentioned above.
+   
+    ```image_callback()```: Stores the image information processed by the robot.
 
 # Challenges 
 (1 paragraph) Describe the challenges you faced and how you overcame them.
