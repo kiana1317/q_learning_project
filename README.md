@@ -4,9 +4,11 @@
 Kiana Hobbs & Hunter Thompson
 
 ## Objectives Description 
+
 The goal is this project is to program a robot with a mechanical arm and gripper to perceive and retrieve color coded dumbbells and place them near a specified numbered block. This project required the use of Q-Learning, perception, and robot manipulation. 
 
 ## High-level  Description
+
 In the project, we used the Q-Learning algorithm to determine the optimal action sequence for moving the dumbbells. To do so, we compiled a matrix of all possible steps that the robot could take to place the dumbbells and iterated through those possibilities to determine which sequence yielded a reward. All other actions beyond the optimal one yielded no reward, which allowed our matrix to converge to the correct action sequence. By employing the technique of rewarding for reinforcement learning, we were able to determine which dumbbells belong in front of each numbered block.
 
 ## Q-learning algorithm description: 
