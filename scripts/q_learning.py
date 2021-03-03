@@ -23,15 +23,8 @@ class QLearning(object):
         # initialize this node
         rospy.init_node('q_learning')
 
-        # ROS subscribe to the topic publishing actions for the robot to take
-        # Every time you want to execute an action, publish a message to this topic 
-        # (this is the same topic you'll be subscribing to in the node you write to have your robot execute the actions).
-        rospy.Subscriber("/q_learning/robot_action", RobotMoveDBToBlock, self.robot_actions)
-
+        # ROS publish to robot action so that phantom movement can occur
         self.robot_action_pub = rospy.Publisher("/q_learning/robot_action",RobotMoveDBToBlock, queue_size=10 )
-
-        # ROS subscribe to the Gazebo topic publishing the locations of the models
-        rospy.Subscriber("/gazebo/model_states", ModelStates, self.model_states_received)
 
         # ROS publish to the Gazebo topic to set the locations of the models
         self.model_states_pub = rospy.Publisher("/gazebo/set_model_state", ModelState, queue_size=10)
@@ -48,9 +41,12 @@ class QLearning(object):
         self.q_matrix = QMatrix()
         self.initialize_q_matrix()
         self.reward = None
-        self.min_iterations = 500
-        self.current_iteration = 0
+        self.min_iterations = 100
+        self.num_iterations_eps = 0
+        self.current_iteration = 1
         self.converged = False
+
+        self.final_actions = []
 
         # intialize current state, next state, and action taken
         self.current_state = 0
@@ -91,7 +87,7 @@ class QLearning(object):
 
     def is_valid_step(self,s1, s2):
         # Count moved blocks
-        moved_blocks = {0: 1, 1: 0}
+        moved_blocks = {0: 0, 1: 0}
 
         # Check no dumbbells are at the same position
         steps = [s1, s2]
@@ -106,6 +102,12 @@ class QLearning(object):
                     return False 
             if b != 0:
                 moved_blocks[index] += 1
+
+        # check if dumbbells move from anyplace other than origin
+        for i in range(3):
+            if s1[i] != 0 and s1[i] != s2[i]:
+                return False
+         
 
         # Check anything other than one block is moved from step1 to step2
         if moved_blocks[1] != moved_blocks[0] + 1:
@@ -136,33 +138,36 @@ class QLearning(object):
         while action == -1:
             action = random.choice(possible_actions)
         
+
         # sets action & next state according to random action
         self.action = action
         self.next_state = possible_actions.index(action)
 
-        # publish action
-        # determine if r/g/b dumbbell
-        if 0 <= self.action < 3:
-            db = "red"
-        elif 3 <= self.action < 6:
-            db = "green"
-        elif 6 <= self.action < 9:
-            db = "blue"
-        else:
-            print("Invalid action")
-        
-        # determine block num
-        block_num = (self.action % 3) + 1
+        db, block_num = self.get_action_tuple(self.action)
 
         # publish action
         pub_action = RobotMoveDBToBlock(robot_db=db, block_id = block_num)
         self.robot_action_pub.publish(pub_action)
 
-    def robot_actions(self, data):
-        pass
+    def get_action_tuple(self, action):
+        # get action as a tuple (dumbbell, block_id)
 
-    def model_states_received(self, data):
-        pass
+        # determine if r/g/b dumbbell
+        if 0 <= action < 3:
+            db = "red"
+        elif 3 <= action < 6:
+            db = "green"
+        elif 6 <= action < 9:
+            db = "blue"
+        else:
+            print("Invalid action")
+        
+        # determine block num
+        block_num = int((action % 3) + 1)
+
+        return (db, block_num)
+
+
 
     def initialize_q_matrix(self):
         # loop over 64 rows and 9 cols putting 0 in each
@@ -179,29 +184,80 @@ class QLearning(object):
         # allows reward to be processed by q matrix
         self.reward = data
 
-    def check_convergence(self):
+        if self.reward.reward != 0:
+            print("just got a reward of", self.reward.reward)
+            print("in state", self.current_state)
 
+        # updates q matrix
+        self.update_q_matrix()
+
+         # updates state when world is reset
+        if self.current_iteration % 3 == 0:
+            self.current_state = 0
+
+        # checks if matrix converged
+        if self.converged is False:
+
+            if self.current_state % 4 != 0 and self.current_state >= 16 and self.current_state % 16 < 4:
+                print("im in final state", self.current_state)
+
+            # update iteration
+            self.current_iteration += 1
+
+
+            # sleep to precent race conditions
+            rospy.sleep(1)
+
+            # update next action
+            self.get_random_action(self.current_state)
+
+            rospy.sleep(0.5)
+
+
+            
+            # check whether we should update convergence
+            self.check_convergence()
+        
+
+    def check_convergence(self):
         # check if iterated minmum amount of times
         if self.current_iteration < self.min_iterations:
             return
         
-        self.converged = True
-        print("The matrix has converged!")
+        if self.num_iterations_eps >= 30:
+            self.converged = True
+            self.get_final_actions()
+            print(self.final_actions)
+            print("The matrix has converged!")
+        
+
 
 
     def update_q_matrix(self):
         alpha = 1
         gamma = 0.5
+        eps = 10
 
         # get value of row from state & action
         current_val = self.q_matrix.q_matrix[self.current_state].q_matrix_row[self.action]
         
         # get max value of all actions for state2
-        max_a = self.q_matrix.q_matrix[self.next_state].q_matrix_row.max()
+        max_a = max(self.q_matrix.q_matrix[self.next_state].q_matrix_row)
+
 
         # update q matrix for state1 & action_t
         self.q_matrix.q_matrix[self.current_state].q_matrix_row[self.action]  += \
-            alpha * (self.reward + gamma * max_a  - current_val)
+            alpha * (self.reward.reward + gamma * max_a  - current_val)
+        
+        post_val = self.q_matrix.q_matrix[self.current_state].q_matrix_row[self.action]
+        
+
+        # update amount of times the the q matrix values don't really change
+        if abs(post_val - current_val) < eps:
+            self.num_iterations_eps += 1
+        else: 
+            self.num_iterations_eps = 0
+
 
         # publish Q matrix
         self.q_matrix_pub.publish(self.q_matrix)
@@ -209,23 +265,46 @@ class QLearning(object):
         # update current state
         self.current_state = self.next_state
 
-    def run(self):
-        
-        # while Q matrix is not converged
-        while self.converged is False:
-            # update iteration
-            self.current_iteration += 1
+        # reset reward to None
+        self.reward = None
 
-            # update next action
-            self.get_random_action(self.current_state)
+    def get_final_actions(self):
+        # get the actions that the bot should taken given q matrix
+        state = 0
+        # loop through and return actions robot should take
+        for i in range(3):
+            # get row of current state & best next action
+            q_mat_row = self.q_matrix.q_matrix[state].q_matrix_row
+            best_action = q_mat_row.index(max(q_mat_row))
+            print("printing row of q matrix", q_mat_row)
+            print("printing best action", best_action)
+
+            # convert action to tuple to use in movement
+            action_tuple = self.get_action_tuple(best_action)
+            print("printing action tuple", action_tuple)
+
+            self.final_actions.append(action_tuple)
+            print("printing final actions", self.final_actions)
+
+            print("printing action matrix row for state", self.action_matrix[state])
+            # get next state
+            state = self.action_matrix[state].index(best_action)
+            print("printing next state", state)
+
             
-            # check whether we should update convergence
-            self.check_convergence
-            
-            rospy.sleep(0.1)
-            # update q matrix
-            self.update_q_matrix()
+
+    def run(self):
+        # wait for node to initialize fully
+        while self.initialized is False:
+            continue
         
+        #wait fully for initializtion
+        rospy.sleep(1)
+        
+        # begin q learning loop
+        self.get_random_action(self.current_state)
+        
+    
         rospy.spin()
 
 
