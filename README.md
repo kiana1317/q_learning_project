@@ -4,7 +4,7 @@
 Kiana Hobbs & Hunter Thompson
 
 ## Objectives Description 
-(2-3 sentences): Describe the goal of this project.
+In the project, we used the Q-Learning algorithm to determine the optimal action sequence for moving the dumbbells. To do so, we compiled a matrix of all possible steps that the robot could take to place the dumbbells and iterated through those possibilities to determine which sequence yielded a reward. All other actions beyond the optimal one yielded no reward, which allowed our matrix to converge to the correct action sequence. By employing the technique of rewarding for reinforcement learning, we were able to determine which dumbbells belong in front of each numbered block.
 
 ## High-level  Description
 (1 paragraph): At a high-level, describe how you used reinforcement learning to solve the task of determining which dumbbells belong in front of each numbered block.
@@ -23,7 +23,8 @@ Describe how you accomplished each of the following components of the perception
 * 
 # Robot manipulation and movement
 Describe how you accomplished each of the following components of the robot manipulation and movement elements of this project in 1-3 sentences, and also describe what functions / sections of the code executed each of these components (1-3 sentences per function / portion of code):
-* Moving to the right spot in order to pick up a dumbbell
+* *Moving to the right spot in order to pick up a dumbbell:
+To navigate the robot to the right spot, we used color perception to scan for the desired dumbbell color. Once the dumbbell was identified, we used the logic from the Line Follower code to keep the robot centered as it approached the dumbbell.
 * Picking up the dumbbell
 * Moving to the desired destination (numbered block) with the dumbbell
 * Putting the dumbbell back down at the desired destination
