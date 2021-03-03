@@ -4,10 +4,10 @@
 Kiana Hobbs & Hunter Thompson
 
 ## Objectives Description 
-In the project, we used the Q-Learning algorithm to determine the optimal action sequence for moving the dumbbells. To do so, we compiled a matrix of all possible steps that the robot could take to place the dumbbells and iterated through those possibilities to determine which sequence yielded a reward. All other actions beyond the optimal one yielded no reward, which allowed our matrix to converge to the correct action sequence. By employing the technique of rewarding for reinforcement learning, we were able to determine which dumbbells belong in front of each numbered block.
+The goal is this project is to program a robot with a mechanical arm and gripper to perceive and retrieve color coded dumbbells and place them near a specified numbered block. This project required the use of Q-Learning, perception, and robot manipulation. 
 
 ## High-level  Description
-(1 paragraph): At a high-level, describe how you used reinforcement learning to solve the task of determining which dumbbells belong in front of each numbered block.
+In the project, we used the Q-Learning algorithm to determine the optimal action sequence for moving the dumbbells. To do so, we compiled a matrix of all possible steps that the robot could take to place the dumbbells and iterated through those possibilities to determine which sequence yielded a reward. All other actions beyond the optimal one yielded no reward, which allowed our matrix to converge to the correct action sequence. By employing the technique of rewarding for reinforcement learning, we were able to determine which dumbbells belong in front of each numbered block.
 
 ## Q-learning algorithm description: 
 Describe how you accomplished each of the following components of the Q-learning algorithm in 1-3 sentences, and also describe what functions / sections of the code executed each of these components(1-3 sentences per function / portion of code):
@@ -23,11 +23,21 @@ Describe how you accomplished each of the following components of the perception
 * 
 # Robot manipulation and movement
 Describe how you accomplished each of the following components of the robot manipulation and movement elements of this project in 1-3 sentences, and also describe what functions / sections of the code executed each of these components (1-3 sentences per function / portion of code):
-* *Moving to the right spot in order to pick up a dumbbell:*
+*Moving to the right spot in order to pick up a dumbbell*
+
 To navigate the robot to the right spot, we used color perception to scan for the desired dumbbell color. Once the dumbbell was identified, we used the logic from the Line Follower code to keep the robot centered as it approached the dumbbell.
-* Picking up the dumbbell
-* Moving to the desired destination (numbered block) with the dumbbell
-* Putting the dumbbell back down at the desired destination
+
+*Picking up the dumbbell*
+
+To pick up the dumbbell, we experimented using the arm UI to see which arm positioning works best for both gripping and lifting the dumbbell. For gripping, we had to ensure that the robot approached the dumbbell centered, given the gripper has a limited extension width. Moreover, for the lifting, we had to guarantee that the end positioning allowed the robot to maneuver without dropping the dumbbell.
+
+* Moving to the desired destination (numbered block) with the dumbbell*
+
+To move to the desired numbered block, we had to employ a combination of image and color perception. While rotating, we used color perception for perceiving black to determine if the robot was facing a block. Then, we used image perception to determine which number it was facing. Once the block was confirmed, we utilized color perception again to keep the robot centered while approaching the block.
+
+* Putting the dumbbell back down at the desired destination*
+
+Once the robot was in a short distance of the block, we opened the gripper and then lowered the arm to allow the block to fall to the ground with control.  
 
 # Challenges 
 (1 paragraph) Describe the challenges you faced and how you overcame them.
