@@ -101,7 +101,7 @@ class Movement(object):
 
         # Action Sequence based on Convergence (color, box)
         # 1 = red, 2 = green, 3 = blue
-        self.action_sequence = [('Green',1),('Blue',3),('Red',2)]
+        self.action_sequence = [('Blue',2),('Red',1),('Green',3)]
         self.moved_dumbbells = 0
         
         # for testing
@@ -136,6 +136,9 @@ class Movement(object):
         elif not self.placed_dumbbell:
             self.process_blocks()
             return
+        elif self.reseting:
+            self.reset()
+            return
         
 
     def processScan(self, data):
@@ -147,26 +150,12 @@ class Movement(object):
 
  
     
-    def reset_positons(self):
-        pass
-        # # Move to center
-        # self.twist.linear.x = 0.6
-        # self.twist.angular.z = 0.0
-        # self.cmd_vel_pub.publish(self.twist)
-        # rospy.sleep(3)
-
-        # # Move arm back in positon
-        # self.starting_arm_position()
-
-        # # reinitialize variables
-        # self.dumbbell_move_in_progress = False
-        # self.dumbbell_found = False
-        # self.block_found = False
-        # self.passed_block_hold =False
-        # self.has_dumbbell = False
-        # self.reached_dumbbell = False
-        # self.reached_block = False
-        # self.reseting = False
+    def reset(self):
+        # reinitialize variables
+        self.has_dumbbell = False
+        self.placed_dumbbell = False
+        self.block_found = False
+        self.reseting = False
 
     def starting_arm_position(self):
         arm_joint_goal = [0,.4,.5,-.9]
@@ -262,7 +251,7 @@ class Movement(object):
                 # pickup
                 self.lift_dumbbell()
                 self.has_dumbbell = True
-                self.reset_positons()
+                self.reseting = True
 
             else:
                 # find pixel of x center of each mask
@@ -341,7 +330,6 @@ class Movement(object):
                 # pickup
                 self.place_dumbbell()
                 self.placed_dumbbell = True
-                self.has_dumbbell = False
                 self.moved_dumbbells += 1
                 return
             # elif self.scanDataRanges[0] == float("inf"):
@@ -361,38 +349,12 @@ class Movement(object):
                 self.twist.angular.z = k_p * err
                 self.cmd_vel_pub.publish(self.twist)
                 return
-            # else:
-            #     # find pixel of x center of each mask
-            #     front_obj = 0
-            #     back_obj = 0
-               
-            #     for i in range(1,100):
-            #         if self.scanDataRanges[i] != float("inf") and front_obj == 0:
-            #             front_obj = i
-            #         if self.scanDataRanges[-i] != float("inf") and back_obj == 0:
-            #             back_obj = -i
-            #     center  = (front_obj + back_obj)/2
-            #     # added shift
-            #     if self.shift:
-            #         # blocks passed
-            #         locs = {1: -1, 2: 0, 3: 1}
-            #         center += locs[len(self.passed_blocks)] * 5
-            #         self.shift = False
-            #     h, w, d = image.shape
-            #     # err = w/2 - center_x
-            #     err = w/2 - center
-            #     k_p = 0.0001 
-            #     self.twist.linear.x = 0.2
-            #     self.twist.angular.z = k_p * err
-            #     self.cmd_vel_pub.publish(self.twist)
-            #     rospy.sleep(2)
-            #     return
 
         # Need to search for block
         self.twist.linear.x = 0
         self.twist.angular.z = 0.0
         self.cmd_vel_pub.publish(self.twist) 
-        # rospy.sleep(1)
+
         # Check the block
         curr_block = self.action_sequence[self.moved_dumbbells][1]
         image = self.bridge.imgmsg_to_cv2(self.image,desired_encoding='rgb8')
@@ -412,7 +374,7 @@ class Movement(object):
             "1":1,
             "2":2,
             "3":3,
-            "s":2,
+            "s":3,
             "l":1,
             "d":3,
             "8":3,
@@ -453,7 +415,8 @@ class Movement(object):
     def run(self):
         r = rospy.Rate(10)
         while not rospy.is_shutdown():
-            self.complete_action()
+            if self.moved_dumbbells != 3:
+                self.complete_action()
             r.sleep()
 
 
