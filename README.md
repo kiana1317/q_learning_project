@@ -73,11 +73,13 @@ Noted generally here because they were used for more than one action related to 
 # Challenges 
 (1 paragraph) Describe the challenges you faced and how you overcame them.
 
+Before using perception, we tried to employ various techniques for finding the center of the blocks, such as scanning for the width of the object and finding the center based off that. However, while that did work for centering on the dumbbells, it proved difficult for approaching the block when we wanted to place the dumbbell at the face of the block.
 # Future work 
 (1 paragraph): If you had more time, how would you improve your implementation?
 # Takeaways 
 (at least 2 bullet points with 2-3 sentences per bullet point): What are your key takeaways from this project that would help you/others in future robot programming assignments working in pairs? For each takeaway, provide a few sentences of elaboration.
-* For centering objects, perception it the best way to go - Before using perception, we tried to employ various techniques for finding the center of the blocks, such as scanning for the width of the object and finding the center based off that. However, while that did work for centering on the dumbbells, it proved difficult for approaching the block when we wanted to place the dumbbell at the face of the block.
+
+* Think more in-depth about how sections intersect before splitting work - We initially divided the project with perception and movement being two distinct sections. As such one partner implemented perception and the other movement. However, after many failed trials at getting them to work disjointly (first perceive all objects, then move based off where you know the objects to be), we realized that in order to facilitate the best mechanics for robot movement, we had to employ perception in unison with movement.
 
 # Implementation Plan
 
