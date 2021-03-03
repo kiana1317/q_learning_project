@@ -87,7 +87,7 @@ class Movement(object):
         # initialize pipeline for keras_ocr
         self.pipeline = keras_ocr.pipeline.Pipeline()
 
-        self.has_block = False
+        self.has_dumbbell = False
 
         self.reached_dumbbell = False
         self.reached_block = False
@@ -119,15 +119,19 @@ class Movement(object):
 
         self.picked_up_block = False
         self.lowered_block = False 
-        self.has_block = False
+        self.has_dumbbell = False
+        self.placed_dumbbell = False
 
         # States
         # Find db, move to dumbbell towads dumbbell, picking-up dumbbell, finding
 
         self.initialized = True
     def complete_action(self):
-        if not self.has_block:
+        if not self.has_dumbbell:
             self.process_dumbbells()
+            return
+        elif not self.placed_dumbbell:
+            self.process_blocks()
             return
         
 
@@ -203,7 +207,7 @@ class Movement(object):
         #     # self.target_turn(179)
         #     turn_angles = {0:-25,1:0,2:25}
         #     self.return_to_center(turn_angles[color_pos], 179, 0.3)
-        #     self.has_block = True 
+        #     self.has_dumbbell = True 
         #     self.reached_dumbbell = True
         #     print(data.ranges)
         #     print(data.ranges[-269:] + data.ranges[:90])
@@ -232,7 +236,7 @@ class Movement(object):
         #     return
         # surrounding_blocks = data.ranges[0:10] + data.ranges[-9:]
         # surrounding_valid_blocks = [x for x in surrounding_blocks if x != float("inf")]
-        # if self.has_block and max(surrounding_valid_blocks) < 1 and not self.passed_block_hold:
+        # if self.has_dumbbell and max(surrounding_valid_blocks) < 1 and not self.passed_block_hold:
         #     k = 0.5 * self.find_block_center(data.ranges, 20, block_angle)
         #     self.twist.linear.x = 0.1
         #     self.twist.angular.z = 0
@@ -241,7 +245,7 @@ class Movement(object):
         # print(data.ranges)
         # self.passed_block_hold = True 
 
-        # if self.has_block and data.ranges[0] < 0.5:
+        # if self.has_dumbbell and data.ranges[0] < 0.5:
         #     self.reseting = True
         #     self.twist.linear.x = 0.0
         #     self.twist.angular.z = 0
@@ -251,11 +255,11 @@ class Movement(object):
         #     self.return_to_center(self.block_center[block_loc],0, 0.6)
         #     self.target_turn(0)
             
-        #     self.has_block = False
+        #     self.has_dumbbell = False
         #     self.reset_positons()
         #     return 
 
-        # elif self.has_block:
+        # elif self.has_dumbbell:
         #     k = 1 * self.find_block_center(data.ranges, 60,block_angle)
         #     self.twist.linear.x = 0.1
         #     self.twist.angular.z = k
@@ -278,7 +282,7 @@ class Movement(object):
         # self.dumbbell_found = False
         # self.block_found = False
         # self.passed_block_hold =False
-        # self.has_block = False
+        # self.has_dumbbell = False
         # self.reached_dumbbell = False
         # self.reached_block = False
         # self.reseting = False
@@ -286,28 +290,6 @@ class Movement(object):
     #  for outer dumbbells, block_angle = ~25
     def return_to_center(self,angle, dir,speed):
         pass
-        # print(angle)
-        # return_angle = 179 + angle 
-        # if return_angle > 179:
-        #     return_angle -= 360
-        # turning = True
-        # print()
-        # while turning:
-        #     self.target_turn(return_angle)
-        #     turning = False
-
-        # self.twist.linear.x = speed
-        # self.twist.angular.z = 0.0
-        # self.cmd_vel_pub.publish(self.twist)
-        # rospy.sleep(3)
-        # self.twist.angular.z = 0.0
-        # self.twist.linear.x = 0.0
-        # self.cmd_vel_pub.publish(self.twist)
-
-        # turning = True
-        # while turning:
-        #     self.target_turn(dir)
-        #     turning = False
 
 
     def dumbbell_center(self, ranges, bound):
@@ -455,7 +437,7 @@ class Movement(object):
         image = self.bridge.imgmsg_to_cv2(self.image,desired_encoding='bgr8')
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
-        curr_color = self.action_sequence[len(self.moved_dumbbells)]
+        curr_color = self.action_sequence[len(self.moved_dumbbells)][0]
 
         # define upper & lower bounds for each color
         # found these values at 
@@ -470,7 +452,6 @@ class Movement(object):
         else:
             lower_color = np.array([25, 52, 72])
             upper_color = np.array([102, 255, 255])
-
         mask = cv2.inRange(hsv, lower_color, upper_color)
         M = cv2.moments(mask)
 
@@ -532,6 +513,8 @@ class Movement(object):
         
 
     def process_blocks(self):
+        if not self.scanDataRanges:
+            return
         # Assumes robot is at the original/reset position and returns relative
         # location of blocks as a dict
         # 'L', 'C', 'R' stands for left, center, and right respectively
@@ -539,26 +522,94 @@ class Movement(object):
         # point camera towards blocks
         rospy.sleep(0.1)
 
+        # self.twist.linear.x = 0
+        # self.twist.angular.z = 0.0
+        # self.cmd_vel_pub.publish(self.twist) 
+        # rospy.sleep(3)
+        curr_block = self.action_sequence[len(self.moved_dumbbells)][1]
         # turn towards rightmost block
-        self.target_turn(130)
         image = self.bridge.imgmsg_to_cv2(self.image,desired_encoding='rgb8')
         nums_detected = self.pipeline.recognize([image])[0]
-        self.block_location[int(nums_detected[0][0])] = 'R'
 
-        # turn towards center block
-        self.target_turn(179)
-        image = self.bridge.imgmsg_to_cv2(self.image,desired_encoding='rgb8')
-        nums_detected = self.pipeline.recognize([image])[0]
-        self.block_location[int(nums_detected[0][0])] = 'C'
+        
+        # No blocks seen
+        if not nums_detected:
+            self.twist.linear.x = 0
+            self.twist.angular.z = 0.05
+            self.cmd_vel_pub.publish(self.twist)
+            rospy.sleep(1)
+            return
 
+        # if nums_detected
+        print("Blocks seen num")
+        print(nums_detected[0][0])
+        print(curr_block)
+        num_predictions ={
+            "1":1,
+            "2":2,
+            "3":3,
+            "s":2,
+            "l":1,
+            "d":3,
+            "8":3,
+            "7":1
 
-        # turn towards left block
-        self.target_turn(-130)
-        image = self.bridge.imgmsg_to_cv2(self.image,desired_encoding='rgb8')
-        nums_detected = self.pipeline.recognize([image])[0]
-        self.block_location[int(nums_detected[0][0])] = 'L'
+        }
+        block = num_predictions[nums_detected[0][0]]
 
-        self.target_turn(0)
+        if block == curr_block:
+            print("Blocks Match")
+            # Use color to locate the center of the block
+            image = self.bridge.imgmsg_to_cv2(self.image,desired_encoding='bgr8')
+            hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+            # detect black numbers
+            lower_color = np.array([0, 0, 0])
+            upper_color = np.array([180, 255, 30])
+
+            mask = cv2.inRange(hsv, lower_color, upper_color)
+            M = cv2.moments(mask)
+
+            # we now erase all pixels that aren't yellow
+            h, w, d = image.shape
+            search_top = int(3*h/4)
+            search_bot = int(3*h/4 + 20)
+            mask[0:search_top, 0:w] = 0
+            mask[search_bot:h, 0:w] = 0
+            
+            if M['m00'] > 0:
+                print("see block")
+                #  if the robot is near the block
+                if self.scanDataRanges[0] < 0.7:
+                    self.twist.linear.x = 0
+                    self.twist.angular.z = 0
+                    self.cmd_vel_pub.publish(self.twist)
+                    # pickup
+                    self.place_dumbbell()
+                    self.placed_dumbbell = True
+                    self.has_dumbbell = False
+
+                else:
+                    # find pixel of x center of each mask
+                    cx = M['m10']/M['m00']
+                    cy = M['m01']/M['m00']
+                    err = w/2 - cx
+                    k_p = 0.001
+                    self.twist.linear.x = 0.2
+                    self.twist.angular.z = k_p * err
+                    self.cmd_vel_pub.publish(self.twist)
+                    # rospy.sleep(1)
+            else:
+                self.twist.linear.x = 0
+                self.twist.angular.z = 0.1
+                self.cmd_vel_pub.publish(self.twist) 
+                # rospy.sleep(1)
+        else:
+            self.twist.linear.x = 0
+            self.twist.angular.z = 0.05
+            self.cmd_vel_pub.publish(self.twist)  
+            # rospy.sleep(1)
+       
 
 
     def robot_actions(self, data):
@@ -571,7 +622,7 @@ class Movement(object):
         pass
 
     def run(self):
-        r = rospy.Rate(5)
+        r = rospy.Rate(10)
         while not rospy.is_shutdown():
             self.complete_action()
             r.sleep()
