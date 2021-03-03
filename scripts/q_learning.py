@@ -44,6 +44,8 @@ class QLearning(object):
         self.min_iterations = 100
         self.num_iterations_eps = 0
         self.current_iteration = 1
+        self.num_rewards = 0
+        self.num_actions_pub = 0
         self.converged = False
 
         self.final_actions = []
@@ -145,9 +147,13 @@ class QLearning(object):
 
         db, block_num = self.get_action_tuple(self.action)
 
+        rospy.sleep(1)
+
         # publish action
         pub_action = RobotMoveDBToBlock(robot_db=db, block_id = block_num)
         self.robot_action_pub.publish(pub_action)
+        self.num_actions_pub += 1
+
 
     def get_action_tuple(self, action):
         # get action as a tuple (dumbbell, block_id)
@@ -183,40 +189,29 @@ class QLearning(object):
     def processReward(self, data):
         # allows reward to be processed by q matrix
         self.reward = data
-
-        if self.reward.reward != 0:
-            print("just got a reward of", self.reward.reward)
-            print("in state", self.current_state)
+        self.num_rewards += 1
 
         # updates q matrix
         self.update_q_matrix()
 
+
          # updates state when world is reset
         if self.current_iteration % 3 == 0:
             self.current_state = 0
+            rospy.sleep(1)
 
         # checks if matrix converged
         if self.converged is False:
-
-            if self.current_state % 4 != 0 and self.current_state >= 16 and self.current_state % 16 < 4:
-                print("im in final state", self.current_state)
 
             # update iteration
             self.current_iteration += 1
 
 
-            # sleep to precent race conditions
-            rospy.sleep(1)
+            # check whether we should update convergence
+            self.check_convergence()
 
             # update next action
             self.get_random_action(self.current_state)
-
-            rospy.sleep(0.5)
-
-
-            
-            # check whether we should update convergence
-            self.check_convergence()
         
 
     def check_convergence(self):
@@ -244,7 +239,6 @@ class QLearning(object):
         # get max value of all actions for state2
         max_a = max(self.q_matrix.q_matrix[self.next_state].q_matrix_row)
 
-
         # update q matrix for state1 & action_t
         self.q_matrix.q_matrix[self.current_state].q_matrix_row[self.action]  += \
             alpha * (self.reward.reward + gamma * max_a  - current_val)
@@ -265,31 +259,40 @@ class QLearning(object):
         # update current state
         self.current_state = self.next_state
 
-        # reset reward to None
-        self.reward = None
 
     def get_final_actions(self):
         # get the actions that the bot should taken given q matrix
         state = 0
         # loop through and return actions robot should take
-        for i in range(3):
+        for i in range(2):
             # get row of current state & best next action
             q_mat_row = self.q_matrix.q_matrix[state].q_matrix_row
             best_action = q_mat_row.index(max(q_mat_row))
-            print("printing row of q matrix", q_mat_row)
-            print("printing best action", best_action)
 
             # convert action to tuple to use in movement
             action_tuple = self.get_action_tuple(best_action)
-            print("printing action tuple", action_tuple)
 
             self.final_actions.append(action_tuple)
-            print("printing final actions", self.final_actions)
 
-            print("printing action matrix row for state", self.action_matrix[state])
             # get next state
             state = self.action_matrix[state].index(best_action)
-            print("printing next state", state)
+        
+        # added this code to allow valid sequence to be returned
+        # so that movement could still be integrated
+        actions = self.final_actions
+        possible_colors = ['red', 'blue', 'green']
+        possible_blocks = [1, 2, 3]
+
+        # remove colors & blocks already in seqn
+        possible_colors.remove(actions[0][0])
+        possible_colors.remove(actions[1][0])
+        possible_blocks.remove(actions[0][1])
+        possible_blocks.remove(actions[1][1])
+
+        # add tuple to list of actions to take
+        self.final_actions.append((possible_colors[0], possible_blocks[0]))
+
+        print(self.final_actions)
 
             
 
