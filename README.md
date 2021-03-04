@@ -104,17 +104,15 @@ Noted generally here because they were used for more than one action related to 
 
 ```image_callback()```: Stores the image information processed by the robot.
 
-# Challenges 
-(1 paragraph) Describe the challenges you faced and how you overcame them.
+## Challenges 
 
 Before using perception, we tried to employ various techniques for finding the center of the blocks, such as scanning for the width of the object and finding the center based off that. However, while that did work for centering on the dumbbells, it proved difficult for approaching the block when we wanted to place the dumbbell at the face of the block. Another challenge was dealing with the tediousness of having to wait until the robot complemented an action sequence to see whether it encountered an error or incorrectly performed. To address this, we used the arm GUI to practice positioning before running the robot script, and we also tried to be more meticulous in our code to limit easy-to-spot bugs occurring during runtime. Another challenge we faced was trying to debug the convergence of the Q Matrix. We noticed that the Q Matrix was returning reward values in unexpected states (ie not all dumbbells were at blocks). We spent a lot of time trying to review our algorithm to understand why this was happening and ultimately realized that more than 3 rewards were returned with each iteration of the 3 dumbbells being placed. To overcome this issue, we decided to return before any computations were completed when we saw the iteration number repeat more than 3 times. 
 
-# Future work 
-(1 paragraph): If you had more time, how would you improve your implementation?
+## Future work 
+
 If we had more time, we would make the way the rewards are being processed more robust. We spent a lot of time scratching our heads as to why our Q Matrix was updating incorrect in interations where it shouldn't be receiving a reward. We were running out of time and decided to just return before anything could be computed if the number of repeated iterations was over 3. We would also try to make our check convergence function more robust as we did not have as much time as we would have liked to determine the best policy for checking due to the debugging process. However, in the future, we could figure out a more robust solution for this issue. On top of this, we would try to make the robot movement occur faster and smoother once the action sequence was received. 
 
 # Takeaways 
-(at least 2 bullet points with 2-3 sentences per bullet point): What are your key takeaways from this project that would help you/others in future robot programming assignments working in pairs? For each takeaway, provide a few sentences of elaboration.
 
 * Think more in-depth about how sections intersect - We initially divided the project with perception and movement being two distinct sections. As such one partner implemented perception and the other movement. However, after many failed trials at getting them to work disjointly (first perceive all objects, then move based off where you know the objects to be), we realized that to facilitate the best mechanics for robot movement, we had to employ perception during rather than before movement.
 * Make sure that the given code is doing what is expected - We spent a lot of time trying to debug our q_learning algorithm assuming that the rewards were all returning as expected. However, we later realized that the issue was not with how we were updating my Q matrix or handling the number of iterations, but rather with extra rewards being received when the world was reset. In the future, we would check to make sure that the code given to us is behaving as we assume it does (good/painful lesson for coding in the real world).
