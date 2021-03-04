@@ -30,19 +30,6 @@ class Movement(object):
         # initialize this node
         rospy.init_node('robot_movement')
 
-        # ROS subscribe to the topic publishing actions for the robot to take
-        # Every time you want to execute an action, publish a message to this topic 
-        # (this is the same topic you'll be subscribing to in the node you write to have your robot execute the actions).
-        rospy.Subscriber("/q_learning/robot_action", RobotMoveDBToBlock, self.robot_actions)
-
-        self.robot_action_pub = rospy.Publisher("/q_learning/robot_action",RobotMoveDBToBlock, queue_size=10 )
-
-        # ROS subscribe to the Gazebo topic publishing the locations of the models
-        rospy.Subscriber("/gazebo/model_states", ModelStates, self.model_states_received)
-
-        # ROS publish to the Gazebo topic to set the locations of the models
-        self.model_states_pub = rospy.Publisher("/gazebo/set_model_state", ModelState, queue_size=10)
-
         # ROS publish to the /cmd_vel topic to update angular and linear velocity
         self.cmd_vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
 
@@ -52,14 +39,6 @@ class Movement(object):
         # ROS subscribe to Image topic to get rgb images
         rospy.Subscriber('camera/rgb/image_raw',Image, self.image_callback)
 
-        # # ROS subscribe to Odometry to get pose information
-        # rospy.Subscriber('/odom', Odometry, self.get_rotation)
-
-        # ROS publish to Q Matrix to update Q-Learning Matrix
-        self.q_matrix_pub = rospy.Publisher("/q_learning/q_matrix", QMatrix, queue_size=10)
-        
-        #ROS subscribe to Rewards to receive from the environment the reward after each action you take
-        rospy.Subscriber("/q_learning/reward", QLearningReward, self.processReward )
         # Creats a twist object
         self.twist = Twist()
 
@@ -77,9 +56,6 @@ class Movement(object):
         # set up ROS / cv bridge
         self.bridge = cv_bridge.CvBridge()
 
-        # # initialize euler orientation (3rd value of tuple is yaw)
-        # self.euler_orientation = None
-
         # initialize pipeline for keras_ocr
         self.pipeline = keras_ocr.pipeline.Pipeline()
 
@@ -87,8 +63,9 @@ class Movement(object):
         self.starting_arm_position()
 
         # Action Sequence based on Convergence (color, box)
-        # 1 = red, 2 = green, 3 = blue
         self.action_sequence = [('Blue',2),('Red',3),('Green',1)]
+
+        # Variables to check states
         self.moved_dumbbells = 0
         self.block_found = False
         self.reseting = False
@@ -97,7 +74,7 @@ class Movement(object):
         self.placed_dumbbell = False
         self.passed_blocks = set()
         self.shift = True
-
+        
         self.initialized = True
 
     def complete_action(self):
@@ -154,6 +131,7 @@ class Movement(object):
         self.move_group_arm.stop()
 
     def place_dumbbell(self):
+        # Place dumbbell on the groun
         self.open_grip()
         arm_joint_goal = [0,.4,.5,-.9]
         self.move_group_arm.go(arm_joint_goal, wait=True)
@@ -163,6 +141,7 @@ class Movement(object):
         self.twist.angular.z = 0.0
         self.cmd_vel_pub.publish(self.twist)
         rospy.sleep(2)
+        # Stop
         self.twist.linear.x = 0.0
         self.twist.angular.z = 0.0
         self.cmd_vel_pub.publish(self.twist)
@@ -174,9 +153,11 @@ class Movement(object):
         self.image = data
 
     def process_dumbbells(self):
+        if not self.initialized:
+            return
+
         if not self.scanDataRanges:
             return
-        print("processed")
         # Assumes robot is at the original/reset position and returns relative
         # location of dumbbells as a dict
         # 'L', 'C', 'R' stands for left, center, and right respectively
@@ -212,9 +193,7 @@ class Movement(object):
         mask[search_bot:h, 0:w] = 0
         # if the color is found 
         if M['m00'] > 0:
-            print("see dumbbell")
-            #  if the robot is near the dumbbell
-            #
+            #  Robot is near the dumbbell
             if self.scanDataRanges[0] < 0.2:
                 self.twist.linear.x = 0
                 self.twist.angular.z = 0
@@ -235,8 +214,9 @@ class Movement(object):
                 self.cmd_vel_pub.publish(self.twist)
 
         else:
+            # Rotate until the dumbbell is in sight
             self.twist.linear.x = 0
-            self.twist.angular.z = 0.2
+            self.twist.angular.z = 0.3
             self.cmd_vel_pub.publish(self.twist)
 
     def process_blocks(self):
@@ -266,23 +246,21 @@ class Movement(object):
             self.twist.angular.z = 0.4
             self.cmd_vel_pub.publish(self.twist)  
             return
-        # Already Found block
+        # Block has been found
         if self.block_found:
-            print("Block found")
-            print(self.scanDataRanges)
+            
+            # the block is near
             if self.scanDataRanges[0] < 0.5:
-                print("place dumbbell")
+
                 self.twist.linear.x = 0
                 self.twist.angular.z = 0
                 self.cmd_vel_pub.publish(self.twist)
-                # pickup
                 self.place_dumbbell()
                 self.placed_dumbbell = True
                 self.moved_dumbbells += 1
                 return
-            # elif self.scanDataRanges[0] == float("inf"):
             else:
-                # we now erase all pixels
+                # erase all pixels
                 h, w, d = image.shape
                 search_top = int(3*h/4)
                 search_bot = int(3*h/4 + 20)
@@ -298,16 +276,15 @@ class Movement(object):
                 self.cmd_vel_pub.publish(self.twist)
                 return
 
-        # Need to search for block
+        # Stop to read the block
         self.twist.linear.x = 0
         self.twist.angular.z = 0.0
         self.cmd_vel_pub.publish(self.twist) 
 
-        # Check the block
-        curr_block = self.action_sequence[self.moved_dumbbells][1]
         image = self.bridge.imgmsg_to_cv2(self.image,desired_encoding='rgb8')
         nums_detected = self.pipeline.recognize([image])[0]
         
+        # If it cannot read the block
         if not nums_detected:
             self.twist.linear.x = 0
             self.twist.angular.z = 0.01
@@ -316,7 +293,7 @@ class Movement(object):
             return
 
 
-        # Possible predictions
+        # Possible predictions from the Keras detection
         num_predictions ={
             "1":1,
             "2":2,
@@ -333,10 +310,11 @@ class Movement(object):
             "i":1,
             "c":2
         }
-        print(nums_detected[0][0])
+
+        curr_block = self.action_sequence[self.moved_dumbbells][1]
         block = num_predictions[nums_detected[0][0]]
         self.passed_blocks.add(block)
-        print(block)
+
         if block == curr_block:
             self.block_found = True
             return
@@ -347,15 +325,6 @@ class Movement(object):
             self.cmd_vel_pub.publish(self.twist)  
             rospy.sleep(2)
             return
-
-    def robot_actions(self, data):
-        pass
-
-    def model_states_received(self, data):
-        pass
-
-    def processReward(self, data):
-        pass
 
     def run(self):
         r = rospy.Rate(10)
@@ -368,5 +337,3 @@ class Movement(object):
 if __name__=="__main__":
     node = Movement()
     node.run()
-
-# Problem: Memory Allocation when running image recognition
