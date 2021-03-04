@@ -39,6 +39,9 @@ class Movement(object):
         # ROS subscribe to Image topic to get rgb images
         rospy.Subscriber('camera/rgb/image_raw',Image, self.image_callback)
 
+        # ROS subscribe to robot action to get action seqn from q learning algo
+        rospy.Subscriber("/q_learning/robot_action", RobotMoveDBToBlock, self.get_action_sequence)
+
         # Creats a twist object
         self.twist = Twist()
 
@@ -63,7 +66,7 @@ class Movement(object):
         self.starting_arm_position()
 
         # Action Sequence based on Convergence (color, box)
-        self.action_sequence = [('Blue',2),('Red',3),('Green',1)]
+        self.action_sequence = []
 
         # Variables to check states
         self.moved_dumbbells = 0
@@ -173,10 +176,10 @@ class Movement(object):
         # found these values at 
         # https://pysource.com/2019/02/15/detecting-colors-hsv-color-space-opencv-with-python/
         # make mask and get moment of each color to find center
-        if curr_color == "Red":
+        if curr_color == "red":
             lower_color = np.array([0, 120, 70])
             upper_color = np.array([10, 255, 255])
-        elif curr_color == "Blue":
+        elif curr_color == "blue":
             lower_color = np.array([94, 80, 2])
             upper_color = np.array([126, 255, 255])
         else:
@@ -325,6 +328,13 @@ class Movement(object):
             self.cmd_vel_pub.publish(self.twist)  
             rospy.sleep(2)
             return
+    
+    def get_action_sequence(self, data):
+        # process action sequence from Q Matrix Algorithm
+        db = data.robot_db
+        block_id = data.block_id
+        self.action_sequence.append((db, block_id))
+        print("Received action", data)
 
     def run(self):
         r = rospy.Rate(10)
@@ -336,4 +346,5 @@ class Movement(object):
 
 if __name__=="__main__":
     node = Movement()
+    input("Press Enter once you have received full action sequence...")
     node.run()

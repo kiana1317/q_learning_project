@@ -21,7 +21,7 @@ class QLearning(object):
     def __init__(self):
         self.initialized = False
         # initialize this node
-        rospy.init_node('q_learning')
+        rospy.init_node('q_learning', disable_signals=True)
 
         # ROS publish to robot action so that phantom movement can occur
         self.robot_action_pub = rospy.Publisher("/q_learning/robot_action",RobotMoveDBToBlock, queue_size=10 )
@@ -233,11 +233,12 @@ class QLearning(object):
         if self.current_iteration < self.min_iterations:
             return
         
-        if self.num_iterations_eps >= 30 and sum(self.q_matrix.q_matrix[0].q_matrix_row) > 0:
+        #checks if converged & makes sure that world is reset
+        if self.num_iterations_eps >= 30 and sum(self.q_matrix.q_matrix[0].q_matrix_row) > 0 \
+            and self.current_iteration % 3 == 0:
             self.converged = True
             self.get_final_actions()
             print("The matrix has converged!")
-        
 
 
 
@@ -254,7 +255,7 @@ class QLearning(object):
 
         # update q matrix for state1 & action_t
         self.q_matrix.q_matrix[self.current_state].q_matrix_row[self.action]  += \
-            alpha * (self.reward.reward + gamma * max_a  - current_val)
+            int(alpha * (self.reward.reward + gamma * max_a  - current_val))
         
         post_val = self.q_matrix.q_matrix[self.current_state].q_matrix_row[self.action]
 
@@ -306,6 +307,20 @@ class QLearning(object):
         self.final_actions.append((possible_colors[0], possible_blocks[0]))
 
         print("Here are the final actions", self.final_actions)
+    
+    def send_final_actions(self):
+        # sends the final actions to movement algo
+
+        for i in range(3):
+            db, block_num = self.final_actions[i]
+
+            # publish action
+            pub_action = RobotMoveDBToBlock(robot_db=db, block_id = block_num)
+            self.robot_action_pub.publish(pub_action)
+
+            rospy.sleep(0.5)
+
+
 
             
 
@@ -320,10 +335,13 @@ class QLearning(object):
         # begin q learning loop
         self.get_random_action(self.current_state)
         
-    
-        rospy.spin()
+            
 
 
 if __name__=="__main__":
     node = QLearning()
     node.run()
+
+    input("Press enter to continue once matrix has converged...")
+
+    node.send_final_actions()
