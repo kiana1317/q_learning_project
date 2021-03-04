@@ -41,12 +41,14 @@ class QLearning(object):
         self.q_matrix = QMatrix()
         self.initialize_q_matrix()
         self.reward = None
-        self.min_iterations = 100
+        self.min_iterations = 150
         self.num_iterations_eps = 0
         self.current_iteration = 1
         self.num_rewards = 0
         self.num_actions_pub = 0
         self.converged = False
+        self.past_iteration = -1
+        self.num_iterations = 0
 
         self.final_actions = []
 
@@ -134,12 +136,12 @@ class QLearning(object):
     def get_random_action(self, step1):
         # gets random action
         if not self.initialized:
-            return
+            return 
         possible_actions = self.action_matrix[step1]
         action = random.choice(possible_actions)
         while action == -1:
             action = random.choice(possible_actions)
-        
+
 
         # sets action & next state according to random action
         self.action = action
@@ -152,6 +154,7 @@ class QLearning(object):
         # publish action
         pub_action = RobotMoveDBToBlock(robot_db=db, block_id = block_num)
         self.robot_action_pub.publish(pub_action)
+        self.action_sent = True
         self.num_actions_pub += 1
 
 
@@ -191,14 +194,25 @@ class QLearning(object):
         self.reward = data
         self.num_rewards += 1
 
+        # check that there are only 3 rewards returned per action seqn
+        # if more returned don't compute any further (messes up queue)
+        if self.reward.iteration_num == self.past_iteration:
+            self.num_iterations += 1
+        else:
+            self.num_iterations = 1
+
+        if self.num_iterations > 3:
+            return 
+
         # updates q matrix
         self.update_q_matrix()
 
+        self.past_iteration = self.reward.iteration_num
 
-         # updates state when world is reset
+        # updates state when world is reset
         if self.current_iteration % 3 == 0:
             self.current_state = 0
-            rospy.sleep(1)
+            rospy.sleep(0.5)
 
         # checks if matrix converged
         if self.converged is False:
@@ -219,10 +233,9 @@ class QLearning(object):
         if self.current_iteration < self.min_iterations:
             return
         
-        if self.num_iterations_eps >= 30:
+        if self.num_iterations_eps >= 30 and sum(self.q_matrix.q_matrix[0].q_matrix_row) > 0:
             self.converged = True
             self.get_final_actions()
-            print(self.final_actions)
             print("The matrix has converged!")
         
 
@@ -244,7 +257,6 @@ class QLearning(object):
             alpha * (self.reward.reward + gamma * max_a  - current_val)
         
         post_val = self.q_matrix.q_matrix[self.current_state].q_matrix_row[self.action]
-        
 
         # update amount of times the the q matrix values don't really change
         if abs(post_val - current_val) < eps:
@@ -277,6 +289,7 @@ class QLearning(object):
             # get next state
             state = self.action_matrix[state].index(best_action)
         
+
         # added this code to allow valid sequence to be returned
         # so that movement could still be integrated
         actions = self.final_actions
@@ -292,7 +305,7 @@ class QLearning(object):
         # add tuple to list of actions to take
         self.final_actions.append((possible_colors[0], possible_blocks[0]))
 
-        print(self.final_actions)
+        print("Here are the final actions", self.final_actions)
 
             
 
